@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, Button, StyleSheet } from 'react-native';
 import { setAvailability } from '../services/DatabaseService';
 
-const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const days =  ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
 
 const AvailabilityPicker = ({ groupId, availability }) => {
   const [selectedDay, setSelectedDay] = useState(null);
@@ -13,8 +13,6 @@ const AvailabilityPicker = ({ groupId, availability }) => {
     if (selectedDay) {
       try {
         await setAvailability(groupId, selectedDay, startTime, endTime);
-        // Refresh availability data after setting new availability
-        // You might want to implement a callback to refresh the parent component
       } catch (error) {
         console.error('Error setting availability:', error);
       }

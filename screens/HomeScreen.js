@@ -17,12 +17,12 @@ const HomeScreen = ({ navigation }) => {
       const groups = await getStudyGroups();
       setStudyGroups(groups);
     } catch (error) {
-      console.error('Error fetching study groups:', error);
+      console.error('erreur:', error);
     }
   };
 
   const handleCreateGroup = () => {
-    navigation.navigate('CreateGroup');
+    navigation.navigate('Creer Groupe');
   };
 
   const handleGroupPress = (group) => {
@@ -38,7 +38,7 @@ const HomeScreen = ({ navigation }) => {
         )}
         keyExtractor={(item) => item.id.toString()}
       />
-      <Button title="Create New Group" onPress={handleCreateGroup} />
+      <Button title="Creer nouveau groupe" onPress={handleCreateGroup} />
       <Button title="Logout" onPress={logout} />
     </View>
   );

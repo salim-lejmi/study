@@ -21,17 +21,17 @@ const GroupDetailsScreen = ({ route, navigation }) => {
       const groupAvailability = await getAvailability(groupId);
       setAvailability(groupAvailability);
     } catch (error) {
-      console.error('Error fetching group details:', error);
+      console.error('erreur:', error);
     }
   };
 
   const handleJoinGroup = async () => {
     try {
       await joinStudyGroup(groupId, user.id);
-      Alert.alert('Success', 'You have joined the group');
+      Alert.alert('Success', 'vous aves joindrez le groupe');
       fetchGroupDetails();
     } catch (error) {
-      Alert.alert('Error', 'Failed to join the group');
+      Alert.alert('Error', 'erreur');
     }
   };
 
@@ -47,7 +47,7 @@ const GroupDetailsScreen = ({ route, navigation }) => {
         renderItem={renderMember}
         keyExtractor={(item) => item.id.toString()}
       />
-      <Button title="Join Group" onPress={handleJoinGroup} />
+      <Button title="Joindre groupe" onPress={handleJoinGroup} />
       <Text style={styles.title}>Group Availability:</Text>
       <AvailabilityPicker groupId={groupId} availability={availability} />
     </View>

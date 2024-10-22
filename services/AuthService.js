@@ -111,7 +111,9 @@ export const AuthProvider = ({ children }) => {
       setUser(null);
       await resetDatabaseConnection(); // Clean up database connection on logout
     } catch (error) {
-      console.error('Error logging out:', error);
+      console.error('Error during logout:', error);
+      // Still set user to null even if there's an error
+      setUser(null);
     }
   };
 

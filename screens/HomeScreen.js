@@ -6,18 +6,38 @@ import StudyGroupItem from '../components/StudyGroupItem';
 
 const HomeScreen = ({ navigation }) => {
   const [studyGroups, setStudyGroups] = useState([]);
-  const { logout } = useContext(AuthContext);
+  const { logout, user } = useContext(AuthContext);
 
   useEffect(() => {
-    fetchStudyGroups();
-  }, []);
-
+    if (user) {  // Only fetch if user exists
+      fetchStudyGroups();
+    }
+  }, [user]);  // Re-run when user changes
   const fetchStudyGroups = async () => {
     try {
       const groups = await getStudyGroups();
       setStudyGroups(groups);
     } catch (error) {
       console.error('Error fetching study groups:', error);
+      setStudyGroups([]); // Set empty array on error
+    }
+  };
+  const handleDeleteGroup = async (groupId) => {
+    if (!user) return; // Guard clause for null user
+    
+    try {
+      await deleteStudyGroup(groupId);
+      fetchStudyGroups();
+    } catch (error) {
+      Alert.alert('Error', 'Failed to delete group');
+    }
+  };
+  const handleLogout = async () => {
+    try {
+      setStudyGroups([]); // Clear groups before logout
+      await logout();
+    } catch (error) {
+      console.error('Error during logout:', error);
     }
   };
 
@@ -34,16 +54,20 @@ const HomeScreen = ({ navigation }) => {
       <FlatList
         data={studyGroups}
         renderItem={({ item }) => (
-          <StudyGroupItem group={item} onPress={() => handleGroupPress(item)} />
+          <StudyGroupItem 
+            group={item} 
+            onPress={() => handleGroupPress(item)}
+            onDelete={handleDeleteGroup}
+            currentUserId={user?.id} // Use optional chaining
+          />
         )}
         keyExtractor={(item) => item.id.toString()}
       />
       <Button title="Create New Group" onPress={handleCreateGroup} />
-      <Button title="Logout" onPress={logout} />
+      <Button title="Logout" onPress={handleLogout} />
     </View>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,

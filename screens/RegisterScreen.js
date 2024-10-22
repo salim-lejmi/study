@@ -1,7 +1,7 @@
 import React, { useState, useContext } from 'react';
 import { View, TextInput, Button, StyleSheet, Alert } from 'react-native';
 import { AuthContext } from '../services/AuthService';
-
+ 
 const RegisterScreen = ({ navigation }) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -51,9 +51,7 @@ const RegisterScreen = ({ navigation }) => {
       ]);
     }
   };
-  
-
-  const handleBackToLogin = () => {
+    const handleBackToLogin = () => {
     resetForm();
     navigation.navigate('Login');
   };

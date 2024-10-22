@@ -27,6 +27,11 @@ const GroupDetailsScreen = ({ route, navigation }) => {
 
   const handleJoinGroup = async () => {
     try {
+      const isMember = await checkMembership(groupId, user.id);
+      if (isMember) {
+        Alert.alert('Info', 'You are already a member of this group');
+        return;
+      }
       await joinStudyGroup(groupId, user.id);
       Alert.alert('Success', 'You have joined the group');
       fetchGroupDetails();

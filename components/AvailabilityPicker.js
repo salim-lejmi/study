@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, Button, StyleSheet } from 'react-native';
-import { setAvailability } from '../services/DatabaseService';
+import { setAvailability,checkAvailabilityExists, getAvailability } from '../services/DatabaseService';
 
 const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -12,15 +12,22 @@ const AvailabilityPicker = ({ groupId, availability }) => {
   const handleSetAvailability = async () => {
     if (selectedDay) {
       try {
+        const exists = await checkAvailabilityExists(groupId, selectedDay, startTime, endTime);
+        if (exists) {
+          Alert.alert('Error', 'This time slot is already added');
+          return;
+        }
         await setAvailability(groupId, selectedDay, startTime, endTime);
-        // Refresh availability data after setting new availability
-        // You might want to implement a callback to refresh the parent component
+        // Refresh availability data
+        const newAvailability = await getAvailability(groupId);
+        setAvailability(newAvailability);
       } catch (error) {
         console.error('Error setting availability:', error);
+        Alert.alert('Error', 'Failed to set availability');
       }
     }
   };
-
+  
   return (
     <View style={styles.container}>
       {days.map((day) => (

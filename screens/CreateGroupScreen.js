@@ -13,11 +13,13 @@ const CreateGroupScreen = ({ navigation }) => {
       await createStudyGroup(name, subject, user.id);
       Alert.alert('Success', 'Study group created successfully');
       navigation.goBack();
+      // Add this to refresh the HomeScreen
+      navigation.getParent()?.navigate('Home');
     } catch (error) {
       Alert.alert('Error', 'Failed to create study group');
     }
   };
-
+  
   return (
     <View style={styles.container}>
       <TextInput

@@ -133,7 +133,9 @@ export const getStudyGroups = () => {
   return new Promise((resolve, reject) => {
     db.transaction((tx) => {
       tx.executeSql(
-        'SELECT * FROM study_groups',
+        `SELECT study_groups.*, users.name as creator_name 
+         FROM study_groups 
+         JOIN users ON study_groups.creator_id = users.id`,
         [],
         (_, { rows }) => {
           resolve(rows._array);
@@ -146,6 +148,21 @@ export const getStudyGroups = () => {
   });
 };
 
+export const deleteStudyGroup = (groupId) => {
+  const db = openDatabase();
+  return new Promise((resolve, reject) => {
+    db.transaction((tx) => {
+      tx.executeSql(
+        'DELETE FROM study_groups WHERE id = ?',
+        [groupId],
+        (_, result) => resolve(result),
+        (_, error) => reject(error)
+      );
+    });
+  });
+};
+
+
 export const createStudyGroup = (name, subject, creatorId) => {
   const db = openDatabase();
   return new Promise((resolve, reject) => {
@@ -153,12 +170,48 @@ export const createStudyGroup = (name, subject, creatorId) => {
       tx.executeSql(
         'INSERT INTO study_groups (name, subject, creator_id) VALUES (?, ?, ?)',
         [name, subject, creatorId],
-        (_, { insertId }) => resolve(insertId),
+        (_, { insertId }) => {
+          // Automatically add creator to group_members
+          tx.executeSql(
+            'INSERT INTO group_members (group_id, user_id) VALUES (?, ?)',
+            [insertId, creatorId],
+            () => resolve(insertId),
+            (_, error) => reject(error)
+          );
+        },
         (_, error) => reject(error)
       );
     });
   });
 };
+export const checkMembership = (groupId, userId) => {
+  const db = openDatabase();
+  return new Promise((resolve, reject) => {
+    db.transaction((tx) => {
+      tx.executeSql(
+        'SELECT COUNT(*) as count FROM group_members WHERE group_id = ? AND user_id = ?',
+        [groupId, userId],
+        (_, { rows }) => resolve(rows.item(0).count > 0),
+        (_, error) => reject(error)
+      );
+    });
+  });
+};
+
+export const checkAvailabilityExists = (groupId, day, startTime, endTime) => {
+  const db = openDatabase();
+  return new Promise((resolve, reject) => {
+    db.transaction((tx) => {
+      tx.executeSql(
+        'SELECT COUNT(*) as count FROM availability WHERE group_id = ? AND day = ? AND start_time = ? AND end_time = ?',
+        [groupId, day, startTime, endTime],
+        (_, { rows }) => resolve(rows.item(0).count > 0),
+        (_, error) => reject(error)
+      );
+    });
+  });
+};
+
 
 export const joinStudyGroup = (groupId, userId) => {
   const db = openDatabase();

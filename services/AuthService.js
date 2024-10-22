@@ -1,11 +1,12 @@
 import React, { createContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { openDatabase } from './DatabaseService';
+import { openDatabase, resetDatabaseConnection, checkEmailExists } from './DatabaseService';
 
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     checkUser();
@@ -23,8 +24,14 @@ export const AuthProvider = ({ children }) => {
   };
 
   const login = async (email, password) => {
+    if (!email || !password) {
+      throw new Error('Email and password are required');
+    }
+
     try {
-      const db = await openDatabase();
+      await resetDatabaseConnection(); // Ensure clean database state
+      const db = openDatabase();
+
       return new Promise((resolve, reject) => {
         db.transaction((tx) => {
           tx.executeSql(
@@ -37,24 +44,40 @@ export const AuthProvider = ({ children }) => {
                 AsyncStorage.setItem('user', JSON.stringify(user));
                 resolve(user);
               } else {
-                reject('Invalid credentials');
+                reject(new Error('Invalid credentials'));
               }
             },
             (_, error) => {
-              reject(error);
+              console.error('Login query error:', error);
+              reject(new Error('Database error during login'));
             }
           );
+        }, (error) => {
+          console.error('Login transaction error:', error);
+          reject(new Error('Database error during login'));
         });
       });
     } catch (error) {
-      console.error('Error logging in:', error);
+      console.error('Login error:', error);
       throw error;
     }
   };
 
   const register = async (name, email, password) => {
+    if (!name || !email || !password) {
+      throw new Error('All fields are required');
+    }
+
     try {
-      const db = await openDatabase();
+      await resetDatabaseConnection(); // Ensure clean database state
+      const emailExists = await checkEmailExists(email);
+      
+      if (emailExists) {
+        throw new Error('Email already registered');
+      }
+
+      const db = openDatabase();
+      
       return new Promise((resolve, reject) => {
         db.transaction((tx) => {
           tx.executeSql(
@@ -67,13 +90,17 @@ export const AuthProvider = ({ children }) => {
               resolve(newUser);
             },
             (_, error) => {
-              reject(error);
+              console.error('Registration query error:', error);
+              reject(new Error('Error creating account'));
             }
           );
+        }, (error) => {
+          console.error('Registration transaction error:', error);
+          reject(new Error('Error creating account'));
         });
       });
     } catch (error) {
-      console.error('Error registering:', error);
+      console.error('Registration error:', error);
       throw error;
     }
   };
@@ -82,13 +109,14 @@ export const AuthProvider = ({ children }) => {
     try {
       await AsyncStorage.removeItem('user');
       setUser(null);
+      await resetDatabaseConnection(); // Clean up database connection on logout
     } catch (error) {
       console.error('Error logging out:', error);
     }
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout }}>
+    <AuthContext.Provider value={{ user, login, register, logout, isLoading }}>
       {children}
     </AuthContext.Provider>
   );

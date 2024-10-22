@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, Button, StyleSheet } from 'react-native';
-import { setAvailability,checkAvailabilityExists, getAvailability } from '../services/DatabaseService';
+import { View, Text, Button, StyleSheet, Alert } from 'react-native';
+import { setAvailability, checkAvailabilityExists, getAvailability } from '../services/DatabaseService';
 
 const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
-const AvailabilityPicker = ({ groupId, availability }) => {
+const AvailabilityPicker = ({ groupId, availability, onAvailabilityUpdate }) => {
   const [selectedDay, setSelectedDay] = useState(null);
   const [startTime, setStartTime] = useState('09:00');
   const [endTime, setEndTime] = useState('17:00');
@@ -18,9 +18,9 @@ const AvailabilityPicker = ({ groupId, availability }) => {
           return;
         }
         await setAvailability(groupId, selectedDay, startTime, endTime);
-        // Refresh availability data
+        // Fetch updated availability
         const newAvailability = await getAvailability(groupId);
-        setAvailability(newAvailability);
+        onAvailabilityUpdate(newAvailability);
       } catch (error) {
         console.error('Error setting availability:', error);
         Alert.alert('Error', 'Failed to set availability');

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { View, FlatList, Button, StyleSheet } from 'react-native';
+import { View, FlatList, Button, StyleSheet, Alert } from 'react-native';
 import { AuthContext } from '../services/AuthService';
-import { getStudyGroups } from '../services/DatabaseService';
+import { getStudyGroups, deleteStudyGroup } from '../services/DatabaseService';
 import StudyGroupItem from '../components/StudyGroupItem';
 
 const HomeScreen = ({ navigation }) => {
@@ -9,32 +9,63 @@ const HomeScreen = ({ navigation }) => {
   const { logout, user } = useContext(AuthContext);
 
   useEffect(() => {
-    if (user) {  // Only fetch if user exists
+    if (user) {
       fetchStudyGroups();
     }
-  }, [user]);  // Re-run when user changes
+  }, [user]);
+
+  // Add navigation focus listener
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      if (user) {
+        fetchStudyGroups();
+      }
+    });
+
+    return unsubscribe;
+  }, [navigation, user]);
+
   const fetchStudyGroups = async () => {
     try {
       const groups = await getStudyGroups();
       setStudyGroups(groups);
     } catch (error) {
       console.error('Error fetching study groups:', error);
-      setStudyGroups([]); // Set empty array on error
+      setStudyGroups([]);
     }
   };
+
   const handleDeleteGroup = async (groupId) => {
-    if (!user) return; // Guard clause for null user
-    
-    try {
-      await deleteStudyGroup(groupId);
-      fetchStudyGroups();
-    } catch (error) {
-      Alert.alert('Error', 'Failed to delete group');
-    }
+    if (!user) return;
+
+    Alert.alert(
+      'Delete Group',
+      'Are you sure you want to delete this group?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel'
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteStudyGroup(groupId);
+              await fetchStudyGroups();
+              Alert.alert('Success', 'Group deleted successfully');
+            } catch (error) {
+              Alert.alert('Error', 'Failed to delete group');
+            }
+          }
+        }
+      ]
+    );
   };
+
   const handleLogout = async () => {
     try {
-      setStudyGroups([]); // Clear groups before logout
+      setStudyGroups([]);
       await logout();
     } catch (error) {
       console.error('Error during logout:', error);
@@ -58,7 +89,7 @@ const HomeScreen = ({ navigation }) => {
             group={item} 
             onPress={() => handleGroupPress(item)}
             onDelete={handleDeleteGroup}
-            currentUserId={user?.id} // Use optional chaining
+            currentUserId={user?.id}
           />
         )}
         keyExtractor={(item) => item.id.toString()}
@@ -68,6 +99,7 @@ const HomeScreen = ({ navigation }) => {
     </View>
   );
 };
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,

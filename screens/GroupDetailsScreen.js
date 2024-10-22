@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { View, Text, FlatList, Button, StyleSheet, Alert } from 'react-native';
 import { AuthContext } from '../services/AuthService';
-import { getGroupMembers, joinStudyGroup, getAvailability } from '../services/DatabaseService';
+import { getGroupMembers, joinStudyGroup, getAvailability, checkMembership } from '../services/DatabaseService';
 import AvailabilityPicker from '../components/AvailabilityPicker';
 
 const GroupDetailsScreen = ({ route, navigation }) => {
@@ -40,6 +40,10 @@ const GroupDetailsScreen = ({ route, navigation }) => {
     }
   };
 
+  const handleAvailabilityUpdate = (newAvailability) => {
+    setAvailability(newAvailability);
+  };
+
   const renderMember = ({ item }) => (
     <Text style={styles.memberItem}>{item.name}</Text>
   );
@@ -54,7 +58,11 @@ const GroupDetailsScreen = ({ route, navigation }) => {
       />
       <Button title="Join Group" onPress={handleJoinGroup} />
       <Text style={styles.title}>Group Availability:</Text>
-      <AvailabilityPicker groupId={groupId} availability={availability} />
+      <AvailabilityPicker 
+        groupId={groupId} 
+        availability={availability} 
+        onAvailabilityUpdate={handleAvailabilityUpdate}
+      />
     </View>
   );
 };

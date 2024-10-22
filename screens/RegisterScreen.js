@@ -33,28 +33,21 @@ const RegisterScreen = ({ navigation }) => {
   
     try {
       await register(name.trim(), email.trim().toLowerCase(), password);
-      Alert.alert('Success', 'Registration successful', [
-        { 
-          text: 'OK', 
-          onPress: () => {
-            resetForm();
-            navigation.navigate('Login'); // Changed to navigate to Login instead of Home
-          }
-        }
-      ]);
+      resetForm();
+      // Navigate back instead of to Login
+      navigation.goBack();
     } catch (error) {
-      Alert.alert('Registration Failed', error.message, [
-        {
-          text: 'OK',
-          onPress: () => setIsSubmitting(false)
-        }
-      ]);
+      Alert.alert('Registration Failed', error.message);
+      setIsSubmitting(false);
     }
   };
-    const handleBackToLogin = () => {
+
+
+  const handleBackToLogin = () => {
     resetForm();
-    navigation.navigate('Login');
+    navigation.goBack();
   };
+
 
   return (
     <View style={styles.container}>

@@ -1,18 +1,48 @@
 // Update the GroupDetailsScreen.js import and icon section:
 
 import React, { useState, useEffect, useContext } from 'react';
-import { View, Text, FlatList, Button, StyleSheet, Alert, TouchableOpacity } from 'react-native';
+import { 
+  View, 
+  Text, 
+  FlatList, 
+  StyleSheet, 
+  Alert, 
+  TouchableOpacity,
+  StatusBar,
+  SafeAreaView,
+  Platform,
+  Dimensions
+} from 'react-native';
 import { AuthContext } from '../services/AuthService';
 import { getGroupMembers, joinStudyGroup, getAvailability, checkMembership } from '../services/DatabaseService';
 import AvailabilityPicker from '../components/AvailabilityPicker';
 import GroupChat from '../components/GroupChat';
 
+const { width } = Dimensions.get('window');
+
 // Simple Message Icon Component
 const MessageIcon = () => (
   <View style={styles.messageIconContainer}>
-    <View style={styles.messageCircle}>
-      <View style={styles.messageCircleDot} />
+    <View style={styles.messageIconInner}>
+      <View style={styles.messageIconDot} />
     </View>
+  </View>
+);
+const CustomButton = ({ onPress, title, style }) => (
+  <TouchableOpacity 
+    style={[styles.customButton, style]} 
+    onPress={onPress}
+    activeOpacity={0.8}
+  >
+    <Text style={styles.customButtonText}>{title}</Text>
+  </TouchableOpacity>
+);
+const MemberCard = ({ name }) => (
+  <View style={styles.memberCard}>
+    <View style={styles.avatarCircle}>
+      <Text style={styles.avatarText}>{name[0].toUpperCase()}</Text>
+    </View>
+    <Text style={styles.memberName}>{name}</Text>
   </View>
 );
 
@@ -27,12 +57,22 @@ const GroupDetailsScreen = ({ route, navigation }) => {
     navigation.setOptions({
       headerRight: () => (
         <TouchableOpacity 
-          style={styles.messageIcon} 
+          style={styles.headerButton} 
           onPress={() => setShowChat(true)}
         >
           <MessageIcon />
         </TouchableOpacity>
       ),
+      headerStyle: {
+        backgroundColor: '#ffffff',
+        elevation: 0,
+        shadowOpacity: 0,
+      },
+      headerTitleStyle: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: '#333',
+      },
     });
   }, [navigation]);
 
@@ -55,90 +95,160 @@ const GroupDetailsScreen = ({ route, navigation }) => {
     try {
       const isMember = await checkMembership(groupId, user.id);
       if (isMember) {
-        Alert.alert('Info', 'You are already a member of this group');
+        Alert.alert('Already a Member', 'You are already part of this study group');
         return;
       }
       await joinStudyGroup(groupId, user.id);
-      Alert.alert('Success', 'You have joined the group');
+      Alert.alert('Welcome!', 'You have successfully joined the group');
       fetchGroupDetails();
     } catch (error) {
-      Alert.alert('Error', 'Failed to join the group');
+      Alert.alert('Error', 'Unable to join the group. Please try again.');
     }
   };
 
+  const renderMember = ({ item }) => (
+    <MemberCard name={item.name} />
+  );
   const handleAvailabilityUpdate = (newAvailability) => {
     setAvailability(newAvailability);
   };
 
-  const renderMember = ({ item }) => (
-    <Text style={styles.memberItem}>{item.name}</Text>
-  );
+ 
 
   return (
-    <View style={styles.container}>
-      <GroupChat
-        groupId={groupId}
-        currentUser={user}
-        visible={showChat}
-        onClose={() => setShowChat(false)}
-      />
-      
-      <Text style={styles.title}>Group Members:</Text>
-      <FlatList
-        data={members}
-        renderItem={renderMember}
-        keyExtractor={(item) => item.id.toString()}
-      />
-      <Button title="Join Group" onPress={handleJoinGroup} />
-      <Text style={styles.title}>Group Availability:</Text>
-      <AvailabilityPicker 
-        groupId={groupId} 
-        availability={availability} 
-        onAvailabilityUpdate={handleAvailabilityUpdate}
-      />
-    </View>
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar backgroundColor="#ffffff" barStyle="dark-content" />
+      <View style={styles.container}>
+        <GroupChat
+          groupId={groupId}
+          currentUser={user}
+          visible={showChat}
+          onClose={() => setShowChat(false)}
+        />
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Members</Text>
+          <FlatList
+            data={members}
+            renderItem={renderMember}
+            keyExtractor={(item) => item.id.toString()}
+            horizontal={false}
+            numColumns={2}
+            columnWrapperStyle={styles.memberRow}
+            showsVerticalScrollIndicator={false}
+          />
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Availability</Text>
+          <AvailabilityPicker 
+            groupId={groupId} 
+            availability={availability} 
+            onAvailabilityUpdate={setAvailability}
+          />
+        </View>
+
+        <CustomButton 
+          title="Join Study Group" 
+          onPress={handleJoinGroup}
+          style={styles.joinButton}
+        />
+      </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+  },
   container: {
     flex: 1,
     padding: 16,
   },
-  title: {
-    fontSize: 18,
+  section: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 22,
     fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 16,
+    paddingHorizontal: 4,
+  },
+  memberRow: {
+    justifyContent: 'space-between',
+    paddingHorizontal: 4,
+  },
+  memberCard: {
+    width: (width - 48) / 2,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    alignItems: 'center',
+    elevation: 2,
+  },
+  avatarCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#6200ee',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 8,
   },
-  memberItem: {
-    fontSize: 16,
-    marginBottom: 4,
+  avatarText: {
+    color: '#ffffff',
+    fontSize: 20,
+    fontWeight: 'bold',
   },
-  messageIcon: {
+  memberName: {
+    fontSize: 16,
+    color: '#333',
+    textAlign: 'center',
+  },
+  customButton: {
+    backgroundColor: '#6200ee',
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    elevation: 3,
+  },
+  customButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  joinButton: {
+    marginTop: 'auto',
+    marginBottom: 16,
+  },
+  headerButton: {
     marginRight: 16,
-    padding: 8,
   },
   messageIconContainer: {
+    padding: 8,
+  },
+  messageIconInner: {
     width: 24,
     height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  messageCircle: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#007AFF',
+    borderColor: '#6200ee',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  messageCircleDot: {
-    width: 4,
-    height: 4,
-    backgroundColor: '#007AFF',
-    borderRadius: 2,
+  messageIconDot: {
+    width: 6,
+    height: 6,
+    backgroundColor: '#6200ee',
+    borderRadius: 3,
   },
 });
+
+
 
 export default GroupDetailsScreen;

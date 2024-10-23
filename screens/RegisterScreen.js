@@ -34,20 +34,18 @@ const RegisterScreen = ({ navigation }) => {
     try {
       await register(name.trim(), email.trim().toLowerCase(), password);
       resetForm();
-      // Navigate back instead of to Login
-      navigation.goBack();
+      // Navigate to Login instead of going back
+      navigation.navigate('Login');
     } catch (error) {
       Alert.alert('Registration Failed', error.message);
       setIsSubmitting(false);
     }
   };
 
-
   const handleBackToLogin = () => {
     resetForm();
-    navigation.goBack();
+    navigation.navigate('Login');
   };
-
 
   return (
     <View style={styles.container}>

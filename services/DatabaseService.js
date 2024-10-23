@@ -90,6 +90,18 @@ export const initDatabase = () => {
             FOREIGN KEY (group_id) REFERENCES study_groups (id)
           )
         `);
+        tx.executeSql(`
+          CREATE TABLE IF NOT EXISTS messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            group_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            content TEXT NOT NULL,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (group_id) REFERENCES study_groups (id),
+            FOREIGN KEY (user_id) REFERENCES users (id)
+          )
+        `);
+        
       },
       (error) => {
         console.error('Error creating tables:', error);
@@ -265,6 +277,37 @@ export const getAvailability = (groupId) => {
     db.transaction((tx) => {
       tx.executeSql(
         'SELECT * FROM availability WHERE group_id = ?',
+        [groupId],
+        (_, { rows }) => resolve(rows._array),
+        (_, error) => reject(error)
+      );
+    });
+  });
+};
+export const sendMessage = (groupId, userId, content) => {
+  const db = openDatabase();
+  return new Promise((resolve, reject) => {
+    db.transaction((tx) => {
+      tx.executeSql(
+        'INSERT INTO messages (group_id, user_id, content) VALUES (?, ?, ?)',
+        [groupId, userId, content],
+        (_, { insertId }) => resolve(insertId),
+        (_, error) => reject(error)
+      );
+    });
+  });
+};
+
+export const getMessages = (groupId) => {
+  const db = openDatabase();
+  return new Promise((resolve, reject) => {
+    db.transaction((tx) => {
+      tx.executeSql(
+        `SELECT messages.*, users.name as sender_name 
+         FROM messages 
+         JOIN users ON messages.user_id = users.id 
+         WHERE group_id = ? 
+         ORDER BY timestamp DESC`,
         [groupId],
         (_, { rows }) => resolve(rows._array),
         (_, error) => reject(error)

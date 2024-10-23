@@ -146,6 +146,31 @@ export const initDatabase = () => {
             FOREIGN KEY (group_id) REFERENCES study_groups (id)
           )
         `);
+        tx.executeSql(
+          "PRAGMA table_info(users)",
+          [],
+          (_, { rows: columnInfo }) => {
+            const hasIsAdmin = columnInfo._array.some(col => col.name === 'is_admin');
+            if (!hasIsAdmin) {
+              tx.executeSql("ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0");
+            }
+          }
+        );
+
+        // Create admin user if doesn't exist
+        tx.executeSql(
+          'SELECT * FROM users WHERE email = ?',
+          ['admin@gmail.com'],
+          (_, { rows }) => {
+            if (rows.length === 0) {
+              tx.executeSql(
+                'INSERT INTO users (name, email, password, is_admin) VALUES (?, ?, ?, ?)',
+                ['admin', 'admin@gmail.com', 'admin', 1]
+              );
+            }
+          }
+        );
+
       },
       (error) => {
         console.error('Error initializing database:', error);
@@ -156,6 +181,107 @@ export const initDatabase = () => {
         resolve();
       }
     );
+  });
+};
+
+
+export const getAllUsers = () => {
+  const db = openDatabase();
+  return new Promise((resolve, reject) => {
+    db.transaction((tx) => {
+      tx.executeSql(
+        `SELECT id, name, email FROM users WHERE is_admin = 0`,
+        [],
+        (_, { rows }) => resolve(rows._array),
+        (_, error) => reject(error)
+      );
+    });
+  });
+};
+
+// Delete user and all their related data
+export const deleteUser = (userId) => {
+  const db = openDatabase();
+  return new Promise((resolve, reject) => {
+    db.transaction((tx) => {
+      // Delete user's messages
+      tx.executeSql('DELETE FROM messages WHERE user_id = ?', [userId]);
+      
+      // Delete user's group memberships
+      tx.executeSql('DELETE FROM group_members WHERE user_id = ?', [userId]);
+      
+      // Delete groups created by user
+      tx.executeSql('DELETE FROM study_groups WHERE creator_id = ?', [userId]);
+      
+      // Finally delete the user
+      tx.executeSql(
+        'DELETE FROM users WHERE id = ?',
+        [userId],
+        (_, result) => resolve(result),
+        (_, error) => reject(error)
+      );
+    });
+  });
+};
+
+// Get dashboard statistics
+export const getDashboardStats = () => {
+  const db = openDatabase();
+  return new Promise((resolve, reject) => {
+    db.transaction((tx) => {
+      const stats = {};
+      
+      // Get total users count
+      tx.executeSql(
+        'SELECT COUNT(*) as count FROM users WHERE is_admin = 0',
+        [],
+        (_, { rows }) => {
+          stats.totalUsers = rows.item(0).count;
+        }
+      );
+      
+      // Get total groups count
+      tx.executeSql(
+        'SELECT COUNT(*) as count FROM study_groups',
+        [],
+        (_, { rows }) => {
+          stats.totalGroups = rows.item(0).count;
+        }
+      );
+      
+      // Get total messages count
+      tx.executeSql(
+        'SELECT COUNT(*) as count FROM messages',
+        [],
+        (_, { rows }) => {
+          stats.totalMessages = rows.item(0).count;
+        }
+      );
+      
+      // Get subjects distribution
+      tx.executeSql(
+        'SELECT subject, COUNT(*) as count FROM study_groups GROUP BY subject',
+        [],
+        (_, { rows }) => {
+          stats.subjectDistribution = rows._array;
+        }
+      );
+      
+      // Get most active groups
+      tx.executeSql(
+        `SELECT study_groups.name, COUNT(messages.id) as message_count 
+         FROM study_groups 
+         LEFT JOIN messages ON study_groups.id = messages.group_id 
+         GROUP BY study_groups.id 
+         ORDER BY message_count DESC 
+         LIMIT 5`,
+        [],
+        (_, { rows }) => {
+          stats.mostActiveGroups = rows._array;
+          resolve(stats);
+        }
+      );
+    });
   });
 };
 

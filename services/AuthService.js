@@ -29,7 +29,7 @@ export const AuthProvider = ({ children }) => {
     }
 
     try {
-      await resetDatabaseConnection(); // Ensure clean database state
+      await resetDatabaseConnection();
       const db = openDatabase();
 
       return new Promise((resolve, reject) => {
@@ -40,7 +40,13 @@ export const AuthProvider = ({ children }) => {
             (_, { rows }) => {
               if (rows.length > 0) {
                 const user = rows.item(0);
-                setUser(user);
+                // Include is_admin in user object
+                setUser({
+                  id: user.id,
+                  name: user.name,
+                  email: user.email,
+                  is_admin: user.is_admin === 1
+                });
                 AsyncStorage.setItem('user', JSON.stringify(user));
                 resolve(user);
               } else {
@@ -52,9 +58,6 @@ export const AuthProvider = ({ children }) => {
               reject(new Error('Database error during login'));
             }
           );
-        }, (error) => {
-          console.error('Login transaction error:', error);
-          reject(new Error('Database error during login'));
         });
       });
     } catch (error) {

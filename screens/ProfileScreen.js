@@ -62,7 +62,7 @@ const ProfileScreen = ({ route, navigation }) => {
         <Text style={styles.name}>{profile.name}</Text>
         <Text style={styles.email}>{profile.email}</Text>
       </View>
-
+  
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Description</Text>
         {isEditing ? (
@@ -79,7 +79,7 @@ const ProfileScreen = ({ route, navigation }) => {
           </Text>
         )}
       </View>
-
+  
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Subjects of Interest</Text>
         {isEditing ? (
@@ -96,7 +96,7 @@ const ProfileScreen = ({ route, navigation }) => {
           </Text>
         )}
       </View>
-
+  
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Joined Groups</Text>
         {profile.joined_groups.length > 0 ? (
@@ -107,7 +107,7 @@ const ProfileScreen = ({ route, navigation }) => {
           <Text style={styles.content}>No groups joined yet</Text>
         )}
       </View>
-
+  
       {isOwnProfile && (
         <View style={styles.buttonContainer}>
           {isEditing ? (
@@ -115,7 +115,7 @@ const ProfileScreen = ({ route, navigation }) => {
               <TouchableOpacity style={styles.button} onPress={handleSave}>
                 <Text style={styles.buttonText}>Save</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[styles.button, styles.cancelButton]}
                 onPress={() => setIsEditing(false)}
               >
@@ -123,13 +123,45 @@ const ProfileScreen = ({ route, navigation }) => {
               </TouchableOpacity>
             </>
           ) : (
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.button}
               onPress={() => setIsEditing(true)}
             >
               <Text style={styles.buttonText}>Edit Profile</Text>
             </TouchableOpacity>
           )}
+        </View>
+      )}
+  
+      {currentUser?.is_admin && !isOwnProfile && (
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity
+            style={[styles.button, styles.deleteButton]}
+            onPress={() => {
+              Alert.alert(
+                'Delete User',
+                'Are you sure you want to delete this user? This action cannot be undone.',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: async () => {
+                      try {
+                        await deleteUser(userId);
+                        navigation.goBack();
+                        Alert.alert('Success', 'User deleted successfully');
+                      } catch (error) {
+                        Alert.alert('Error', 'Failed to delete user');
+                      }
+                    }
+                  }
+                ]
+              );
+            }}
+          >
+            <Text style={styles.buttonText}>Delete User</Text>
+          </TouchableOpacity>
         </View>
       )}
     </ScrollView>
@@ -216,6 +248,10 @@ const styles = StyleSheet.create({
     color: '#444',
     paddingVertical: 5,
   },
+  deleteButton: {
+    backgroundColor: '#ff4444',
+  },
+  
 });
 
 export default ProfileScreen;

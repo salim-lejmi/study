@@ -183,12 +183,15 @@ const HomeScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
+      {/* Header with Filter Button */}
       <View style={styles.header}>
         <Button 
           title={`Filter${selectedSubjects.length > 0 ? ` (${selectedSubjects.length})` : ''}`}
           onPress={() => setIsFilterModalVisible(true)}
         />
       </View>
+  
+      {/* Study Groups List */}
       <FlatList
         data={studyGroups}
         renderItem={({ item }) => (
@@ -201,12 +204,36 @@ const HomeScreen = ({ navigation }) => {
         )}
         keyExtractor={(item) => item.id.toString()}
       />
-      <Button title="Create New Group" onPress={handleCreateGroup} />
-      <Button title="Logout" onPress={handleLogout} />
+  
+      {/* Admin Buttons (only for admin users) */}
+      {user?.is_admin ? (
+        <View style={styles.adminButtonsContainer}>
+          <TouchableOpacity
+            style={[styles.adminButton, { marginRight: 10 }]}
+            onPress={() => navigation.navigate('UserList')}
+          >
+            <Text style={styles.adminButtonText}>User List</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.adminButton}
+            onPress={() => navigation.navigate('Dashboard')}
+          >
+            <Text style={styles.adminButtonText}>Dashboard</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
+  
+      {/* Action Buttons */}
+      <View style={styles.actionButtonsContainer}>
+        <Button title="Create New Group" onPress={handleCreateGroup} />
+        <Button title="Logout" onPress={handleLogout} />
+      </View>
+  
+      {/* Filter Modal */}
       <FilterModal />
     </View>
   );
-};
+  };
 
 const styles = StyleSheet.create({
   container: {
@@ -298,6 +325,23 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   
+  adminButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    padding: 10,
+    marginBottom: 10,
+  },
+  adminButton: {
+    backgroundColor: '#6200ee',
+    padding: 10,
+    borderRadius: 5,
+    flex: 1,
+  },
+  adminButtonText: {
+    color: 'white',
+    textAlign: 'center',
+    fontWeight: 'bold',
+  },
   
 });
 

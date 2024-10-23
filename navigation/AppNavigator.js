@@ -6,6 +6,7 @@ import HomeScreen from '../screens/HomeScreen';
 import CreateGroupScreen from '../screens/CreateGroupScreen';
 import GroupDetailsScreen from '../screens/GroupDetailsScreen';
 import { AuthContext } from '../services/AuthService';
+import ProfileScreen from '../screens/ProfileScreen';
 
 const Stack = createStackNavigator();
 
@@ -17,6 +18,7 @@ const AppNavigator = () => {
       {user ? (
         <>
           <Stack.Screen name="Home" component={HomeScreen} />
+          <Stack.Screen name="Profile" component={ProfileScreen} />
           <Stack.Screen name="CreateGroup" component={CreateGroupScreen} />
           <Stack.Screen name="GroupDetails" component={GroupDetailsScreen} />
         </>

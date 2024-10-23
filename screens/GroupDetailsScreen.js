@@ -37,13 +37,13 @@ const CustomButton = ({ onPress, title, style }) => (
     <Text style={styles.customButtonText}>{title}</Text>
   </TouchableOpacity>
 );
-const MemberCard = ({ name }) => (
-  <View style={styles.memberCard}>
+const MemberCard = ({ name, userId, onPress }) => (
+  <TouchableOpacity style={styles.memberCard} onPress={onPress}>
     <View style={styles.avatarCircle}>
       <Text style={styles.avatarText}>{name[0].toUpperCase()}</Text>
     </View>
     <Text style={styles.memberName}>{name}</Text>
-  </View>
+  </TouchableOpacity>
 );
 
 const GroupDetailsScreen = ({ route, navigation }) => {
@@ -107,8 +107,13 @@ const GroupDetailsScreen = ({ route, navigation }) => {
   };
 
   const renderMember = ({ item }) => (
-    <MemberCard name={item.name} />
+    <MemberCard 
+      name={item.name}
+      userId={item.id}
+      onPress={() => navigation.navigate('Profile', { userId: item.id })}
+    />
   );
+  
   const handleAvailabilityUpdate = (newAvailability) => {
     setAvailability(newAvailability);
   };

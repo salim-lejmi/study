@@ -40,122 +40,124 @@ export const resetDatabaseConnection = async () => {
   return openDatabase();
 };
 
-  export const initDatabase = () => {
-    const db = openDatabase();
-    return new Promise((resolve, reject) => {
-      db.transaction(
-        (tx) => {
-          // Enable foreign keys
-          tx.executeSql('PRAGMA foreign_keys = ON;');
+export const initDatabase = () => {
+  const db = openDatabase();
+  return new Promise((resolve, reject) => {
+    db.transaction(
+      (tx) => {
+        // Enable foreign keys
+        tx.executeSql('PRAGMA foreign_keys = ON;');
 
-          // First check if messages table exists and what columns it has
-          tx.executeSql(
-            "SELECT sql FROM sqlite_master WHERE type='table' AND name='messages'",
-            [],
-            (_, { rows }) => {
-              const tableExists = rows.length > 0;
-              
-              if (!tableExists) {
-                // If table doesn't exist, create it with all columns
-                tx.executeSql(`
-                  CREATE TABLE IF NOT EXISTS messages (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    group_id INTEGER NOT NULL,
-                    user_id INTEGER NOT NULL,
-                    content TEXT NOT NULL,
-                    message_type TEXT DEFAULT 'text',
-                    image_url TEXT,
-                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (group_id) REFERENCES study_groups (id),
-                    FOREIGN KEY (user_id) REFERENCES users (id)
-                  )
-                `);
-              } else {
-                // If table exists, check if message_type column exists
-                tx.executeSql(
-                  "PRAGMA table_info(messages)",
-                  [],
-                  (_, { rows: columnInfo }) => {
-                    const hasMessageType = columnInfo._array.some(
-                      col => col.name === 'message_type'
-                    );
-                    
-                    if (!hasMessageType) {
-                      // Add message_type column if it doesn't exist
-                      tx.executeSql(
-                        "ALTER TABLE messages ADD COLUMN message_type TEXT DEFAULT 'text'"
-                      );
-                    }
+        // Check if the 'messages' table exists and adjust its columns
+        tx.executeSql(
+          "SELECT sql FROM sqlite_master WHERE type='table' AND name='messages'",
+          [],
+          (_, { rows }) => {
+            const tableExists = rows.length > 0;
 
-                    const hasImageUrl = columnInfo._array.some(
-                      col => col.name === 'image_url'
-                    );
-                    
-                    if (!hasImageUrl) {
-                      // Add image_url column if it doesn't exist
-                      tx.executeSql(
-                        "ALTER TABLE messages ADD COLUMN image_url TEXT"
-                      );
-                    }
-                  }
-                );
-              }
+            if (!tableExists) {
+              // Create 'messages' table if it doesn't exist
+              tx.executeSql(`
+                CREATE TABLE IF NOT EXISTS messages (
+                  id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  group_id INTEGER NOT NULL,
+                  user_id INTEGER NOT NULL,
+                  content TEXT NOT NULL,
+                  message_type TEXT DEFAULT 'text',
+                  image_url TEXT,
+                  timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                  FOREIGN KEY (group_id) REFERENCES study_groups (id),
+                  FOREIGN KEY (user_id) REFERENCES users (id)
+                )
+              `);
+            } else {
+              // Check if 'message_type' and 'image_url' columns exist
+              tx.executeSql("PRAGMA table_info(messages)", [], (_, { rows: columnInfo }) => {
+                const hasMessageType = columnInfo._array.some(col => col.name === 'message_type');
+                const hasImageUrl = columnInfo._array.some(col => col.name === 'image_url');
+
+                if (!hasMessageType) {
+                  tx.executeSql("ALTER TABLE messages ADD COLUMN message_type TEXT DEFAULT 'text'");
+                }
+
+                if (!hasImageUrl) {
+                  tx.executeSql("ALTER TABLE messages ADD COLUMN image_url TEXT");
+                }
+              });
             }
-          );
+          }
+        );
 
-          tx.executeSql(`
-            CREATE TABLE IF NOT EXISTS users (
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              name TEXT NOT NULL,
-              email TEXT UNIQUE NOT NULL,
-              password TEXT NOT NULL,
-              CONSTRAINT email_unique UNIQUE (email)
-            )
-          `);
+        // Check if 'description' and 'subjects_of_interest' columns exist in 'users' table
+        tx.executeSql("PRAGMA table_info(users)", [], (_, { rows: columnInfo }) => {
+          const hasDescription = columnInfo._array.some(col => col.name === 'description');
+          const hasSubjectsOfInterest = columnInfo._array.some(col => col.name === 'subjects_of_interest');
 
-          tx.executeSql(`
-            CREATE TABLE IF NOT EXISTS study_groups (
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              name TEXT,
-              subject TEXT,
-              creator_id INTEGER,
-              FOREIGN KEY (creator_id) REFERENCES users (id)
-            )
-          `);
+          if (!hasDescription) {
+            tx.executeSql("ALTER TABLE users ADD COLUMN description TEXT DEFAULT NULL");
+          }
 
-          tx.executeSql(`
-            CREATE TABLE IF NOT EXISTS group_members (
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              group_id INTEGER,
-              user_id INTEGER,
-              FOREIGN KEY (group_id) REFERENCES study_groups (id),
-              FOREIGN KEY (user_id) REFERENCES users (id)
-            )
-          `);
+          if (!hasSubjectsOfInterest) {
+            tx.executeSql("ALTER TABLE users ADD COLUMN subjects_of_interest TEXT DEFAULT NULL");
+          }
+        });
 
-          tx.executeSql(`
-            CREATE TABLE IF NOT EXISTS availability (
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              group_id INTEGER,
-              day TEXT,
-              start_time TEXT,
-              end_time TEXT,
-              FOREIGN KEY (group_id) REFERENCES study_groups (id)
-            )
-          `);
-        },
-        (error) => {
-          console.error('Error initializing database:', error);
-          reject(error);
-        },
-        () => {
-          console.log('Database initialized successfully!');
-          resolve();
-        }
-      );
-    });
-  };
+        // Create 'users' table if it doesn't exist
+        tx.executeSql(`
+          CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            email TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL,
+            CONSTRAINT email_unique UNIQUE (email)
+          )
+        `);
 
+        // Create 'study_groups' table
+        tx.executeSql(`
+          CREATE TABLE IF NOT EXISTS study_groups (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT,
+            subject TEXT,
+            creator_id INTEGER,
+            FOREIGN KEY (creator_id) REFERENCES users (id)
+          )
+        `);
+
+        // Create 'group_members' table
+        tx.executeSql(`
+          CREATE TABLE IF NOT EXISTS group_members (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            group_id INTEGER,
+            user_id INTEGER,
+            FOREIGN KEY (group_id) REFERENCES study_groups (id),
+            FOREIGN KEY (user_id) REFERENCES users (id)
+          )
+        `);
+
+        // Create 'availability' table
+        tx.executeSql(`
+          CREATE TABLE IF NOT EXISTS availability (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            group_id INTEGER,
+            day TEXT,
+            start_time TEXT,
+            end_time TEXT,
+            FOREIGN KEY (group_id) REFERENCES study_groups (id)
+          )
+        `);
+      },
+      (error) => {
+        console.error('Error initializing database:', error);
+        reject(error);
+      },
+      () => {
+        console.log('Database initialized successfully!');
+        resolve();
+      }
+    );
+  });
+};
 
 // Helper function to check if email exists
 export const checkEmailExists = async (email) => {
@@ -388,6 +390,48 @@ export const getUniqueSubjects = () => {
         (_, { rows }) => {
           resolve(rows._array.map(row => row.subject));
         },
+        (_, error) => reject(error)
+      );
+    });
+  });
+};
+
+export const getUserProfile = (userId) => {
+  const db = openDatabase();
+  return new Promise((resolve, reject) => {
+    db.transaction((tx) => {
+      tx.executeSql(
+        `SELECT users.*, 
+         GROUP_CONCAT(DISTINCT study_groups.name) as joined_groups
+         FROM users 
+         LEFT JOIN group_members ON users.id = group_members.user_id
+         LEFT JOIN study_groups ON group_members.group_id = study_groups.id
+         WHERE users.id = ?
+         GROUP BY users.id`,
+        [userId],
+        (_, { rows }) => {
+          if (rows.length > 0) {
+            const profile = rows.item(0);
+            profile.joined_groups = profile.joined_groups ? profile.joined_groups.split(',') : [];
+            resolve(profile);
+          } else {
+            reject(new Error('User not found'));
+          }
+        },
+        (_, error) => reject(error)
+      );
+    });
+  });
+};
+
+export const updateUserProfile = (userId, description, subjectsOfInterest) => {
+  const db = openDatabase();
+  return new Promise((resolve, reject) => {
+    db.transaction((tx) => {
+      tx.executeSql(
+        'UPDATE users SET description = ?, subjects_of_interest = ? WHERE id = ?',
+        [description, subjectsOfInterest, userId],
+        (_, result) => resolve(result),
         (_, error) => reject(error)
       );
     });

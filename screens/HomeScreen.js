@@ -4,6 +4,7 @@ import { AuthContext } from '../services/AuthService';
 import { getStudyGroups, getUniqueSubjects, deleteStudyGroup } from '../services/DatabaseService';
 import StudyGroupItem from '../components/StudyGroupItem';
 
+
 const HomeScreen = ({ navigation }) => {
   const [studyGroups, setStudyGroups] = useState([]);
   const [subjects, setSubjects] = useState([]);
@@ -28,6 +29,21 @@ const HomeScreen = ({ navigation }) => {
 
     return unsubscribe;
   }, [navigation, user]);
+  useEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity
+          style={styles.headerButton}
+          onPress={() => navigation.navigate('Profile')}
+        >
+          <View style={styles.profileIcon}>
+            <Text style={styles.profileIconText}>{user?.name?.[0]?.toUpperCase()}</Text>
+          </View>
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, user]);
+  
   const fetchSubjects = async () => {
     try {
       const availableSubjects = await getUniqueSubjects();
@@ -267,6 +283,22 @@ const styles = StyleSheet.create({
   closeButtonText: {
     color: '#666',
   },
+  profileIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#6200ee',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 15,
+  },
+  profileIconText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  
+  
 });
 
 export default HomeScreen;

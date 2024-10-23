@@ -1,7 +1,8 @@
 import React, { useState, useContext } from 'react';
 import { View, TextInput, Button, StyleSheet, Alert } from 'react-native';
 import { AuthContext } from '../services/AuthService';
- 
+import theme from '../components/theme';
+
 const RegisterScreen = ({ navigation }) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');

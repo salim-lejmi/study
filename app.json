@@ -1,5 +1,14 @@
 {
   "expo": {
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "The app needs access to your photos to share images in the chat."
+        }
+      ]
+    ]
+    ,
     "name": "Study",
     "slug": "Study",
     "version": "1.0.0",

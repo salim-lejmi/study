@@ -9,7 +9,11 @@ import {
   Platform,
   TouchableOpacity,
   Linking,
+  Image,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system';
+import { Ionicons } from '@expo/vector-icons'; // Using Expo's built-in icons
 import { sendMessage, getMessages } from '../services/DatabaseService';
 
 // URL matching regex pattern
@@ -27,6 +31,16 @@ const GroupChat = ({ groupId, currentUser, visible, onClose }) => {
       return () => clearInterval(interval);
     }
   }, [visible]);
+
+  useEffect(() => {
+    (async () => {
+      // Request permission to access the photo library
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        alert('Sorry, we need camera roll permissions to share images!');
+      }
+    })();
+  }, []);
 
   const fetchMessages = async () => {
     try {
@@ -49,24 +63,69 @@ const GroupChat = ({ groupId, currentUser, visible, onClose }) => {
     }
   };
 
-  const handleUrlPress = async (url) => {
+  const handleImagePick = async () => {
     try {
-      // Add https:// if the URL starts with www.
-      const fullUrl = url.startsWith('www.') ? `https://${url}` : url;
-      const supported = await Linking.canOpenURL(fullUrl);
-      
-      if (supported) {
-        await Linking.openURL(fullUrl);
-      } else {
-        console.error(`Don't know how to open URL: ${fullUrl}`);
+      // Request permission first
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        alert('Sorry, we need camera roll permissions to share images!');
+        return;
+      }
+  
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.8,
+        allowsEditing: true,
+        aspect: [4, 3],
+      });
+  
+      if (!result.canceled && result.assets && result.assets[0]) {
+        const selectedImage = result.assets[0];
+        
+        // Create a unique filename for the image
+        const filename = `${Date.now()}_${currentUser.id}.jpg`;
+        const destinationUri = `${FileSystem.documentDirectory}images/${filename}`;
+  
+        // Ensure the images directory exists
+        await FileSystem.makeDirectoryAsync(
+          `${FileSystem.documentDirectory}images/`,
+          { intermediates: true }
+        );
+  
+        // Copy the image to app's document directory
+        await FileSystem.copyAsync({
+          from: selectedImage.uri,
+          to: destinationUri,
+        });
+  
+        // Send message with image
+        await sendMessage(
+          groupId,
+          currentUser.id,
+          'Sent an image',
+          'image',
+          destinationUri
+        );
+  
+        fetchMessages();
       }
     } catch (error) {
-      console.error('Error opening URL:', error);
+      console.error('Error picking or sending image:', error);
+      alert('Failed to send image. Please try again.');
     }
   };
+    const renderMessageContent = (message) => {
+    if (message.message_type === 'image') {
+      return (
+        <Image
+          source={{ uri: message.image_url }}
+          style={styles.messageImage}
+          resizeMode="cover"
+        />
+      );
+    }
 
-  const renderMessageContent = (content) => {
-    const parts = content.split(URL_REGEX);
+    const parts = message.content.split(URL_REGEX);
     return parts.map((part, index) => {
       if (URL_REGEX.test(part)) {
         return (
@@ -91,7 +150,7 @@ const GroupChat = ({ groupId, currentUser, visible, onClose }) => {
     ]}>
       <Text style={styles.senderName}>{item.sender_name}</Text>
       <View style={styles.messageContent}>
-        {renderMessageContent(item.content)}
+        {renderMessageContent(item)}
       </View>
       <Text style={styles.timestamp}>
         {new Date(item.timestamp).toLocaleTimeString()}
@@ -106,7 +165,7 @@ const GroupChat = ({ groupId, currentUser, visible, onClose }) => {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Group Chat</Text>
         <TouchableOpacity onPress={onClose}>
-          <Text style={styles.closeButton}>×</Text>
+          <Ionicons name="close" size={24} color="#000" />
         </TouchableOpacity>
       </View>
       
@@ -123,6 +182,12 @@ const GroupChat = ({ groupId, currentUser, visible, onClose }) => {
         />
         
         <View style={styles.inputContainer}>
+          <TouchableOpacity 
+            style={styles.imageButton} 
+            onPress={handleImagePick}
+          >
+            <Ionicons name="images" size={24} color="#007AFF" />
+          </TouchableOpacity>
           <TextInput
             style={styles.input}
             value={newMessage}
@@ -164,10 +229,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
   },
-  closeButton: {
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
   chatContainer: {
     flex: 1,
   },
@@ -178,8 +239,7 @@ const styles = StyleSheet.create({
     maxWidth: '80%',
   },
   messageContent: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: 'column',
   },
   sentMessage: {
     alignSelf: 'flex-end',
@@ -196,10 +256,17 @@ const styles = StyleSheet.create({
   },
   messageText: {
     fontSize: 16,
+    color: '#000',
   },
   linkText: {
     color: '#0000EE',
     textDecorationLine: 'underline',
+  },
+  messageImage: {
+    width: 200,
+    height: 150,
+    borderRadius: 8,
+    marginVertical: 4,
   },
   timestamp: {
     fontSize: 10,
@@ -212,6 +279,12 @@ const styles = StyleSheet.create({
     padding: 8,
     borderTopWidth: 1,
     borderTopColor: '#e0e0e0',
+    alignItems: 'center',
+  },
+  imageButton: {
+    padding: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   input: {
     flex: 1,
@@ -228,6 +301,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     paddingHorizontal: 16,
     justifyContent: 'center',
+    height: 40,
   },
   sendButtonText: {
     color: 'white',

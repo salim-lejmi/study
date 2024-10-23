@@ -1,39 +1,73 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { View, FlatList, Button, StyleSheet, Alert } from 'react-native';
+import { View, FlatList, Button, StyleSheet, Alert, Modal, TouchableOpacity, Text } from 'react-native';
 import { AuthContext } from '../services/AuthService';
-import { getStudyGroups, deleteStudyGroup } from '../services/DatabaseService';
+import { getStudyGroups, getUniqueSubjects, deleteStudyGroup } from '../services/DatabaseService';
 import StudyGroupItem from '../components/StudyGroupItem';
 
 const HomeScreen = ({ navigation }) => {
   const [studyGroups, setStudyGroups] = useState([]);
+  const [subjects, setSubjects] = useState([]);
+  const [selectedSubjects, setSelectedSubjects] = useState([]);
+  const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
   const { logout, user } = useContext(AuthContext);
 
   useEffect(() => {
     if (user) {
       fetchStudyGroups();
+      fetchSubjects();
     }
   }, [user]);
 
-  // Add navigation focus listener
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
       if (user) {
         fetchStudyGroups();
+        fetchSubjects();
       }
     });
 
     return unsubscribe;
   }, [navigation, user]);
+  const fetchSubjects = async () => {
+    try {
+      const availableSubjects = await getUniqueSubjects();
+      setSubjects(availableSubjects);
+    } catch (error) {
+      console.error('Error fetching subjects:', error);
+      setSubjects([]);
+    }
+  };
+
 
   const fetchStudyGroups = async () => {
     try {
-      const groups = await getStudyGroups();
+      const groups = await getStudyGroups(selectedSubjects.length > 0 ? selectedSubjects : null);
       setStudyGroups(groups);
     } catch (error) {
       console.error('Error fetching study groups:', error);
       setStudyGroups([]);
     }
   };
+  const toggleSubjectSelection = (subject) => {
+    setSelectedSubjects(prev => {
+      if (prev.includes(subject)) {
+        return prev.filter(s => s !== subject);
+      } else {
+        return [...prev, subject];
+      }
+    });
+  };
+  const applyFilters = async () => {
+    await fetchStudyGroups();
+    setIsFilterModalVisible(false);
+  };
+  const clearFilters = () => {
+    setSelectedSubjects([]);
+    setIsFilterModalVisible(false);
+    fetchStudyGroups();
+  };
+
+
 
   const handleDeleteGroup = async (groupId) => {
     if (!user) return;
@@ -80,8 +114,65 @@ const HomeScreen = ({ navigation }) => {
     navigation.navigate('GroupDetails', { groupId: group.id });
   };
 
+
+  const FilterModal = () => (
+    <Modal
+      visible={isFilterModalVisible}
+      transparent={true}
+      animationType="slide"
+      onRequestClose={() => setIsFilterModalVisible(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <Text style={styles.modalTitle}>Filter by Subjects</Text>
+          <View style={styles.subjectList}>
+            {subjects.map((subject) => (
+              <TouchableOpacity
+                key={subject}
+                style={[
+                  styles.subjectItem,
+                  selectedSubjects.includes(subject) && styles.selectedSubject
+                ]}
+                onPress={() => toggleSubjectSelection(subject)}
+              >
+                <Text style={[
+                  styles.subjectText,
+                  selectedSubjects.includes(subject) && styles.selectedSubjectText
+                ]}>
+                  {subject}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <View style={styles.modalButtons}>
+            <TouchableOpacity style={styles.button} onPress={clearFilters}>
+              <Text style={styles.buttonText}>Clear</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.button} onPress={applyFilters}>
+              <Text style={styles.buttonText}>Apply</Text>
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity 
+            style={styles.closeButton}
+            onPress={() => setIsFilterModalVisible(false)}
+          >
+            <Text style={styles.closeButtonText}>Back</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+
+
+
   return (
     <View style={styles.container}>
+      <View style={styles.header}>
+        <Button 
+          title={`Filter${selectedSubjects.length > 0 ? ` (${selectedSubjects.length})` : ''}`}
+          onPress={() => setIsFilterModalVisible(true)}
+        />
+      </View>
       <FlatList
         data={studyGroups}
         renderItem={({ item }) => (
@@ -96,6 +187,7 @@ const HomeScreen = ({ navigation }) => {
       />
       <Button title="Create New Group" onPress={handleCreateGroup} />
       <Button title="Logout" onPress={handleLogout} />
+      <FilterModal />
     </View>
   );
 };
@@ -104,6 +196,76 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginBottom: 10,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 10,
+    padding: 20,
+    width: '80%',
+    maxHeight: '80%',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  subjectList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  subjectItem: {
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#f0f0f0',
+    marginBottom: 10,
+  },
+  selectedSubject: {
+    backgroundColor: '#007AFF',
+  },
+  subjectText: {
+    color: '#333',
+  },
+  selectedSubjectText: {
+    color: 'white',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginTop: 20,
+  },
+  button: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 5,
+    minWidth: 100,
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: 'white',
+    fontWeight: '500',
+  },
+  closeButton: {
+    marginTop: 15,
+    alignItems: 'center',
+  },
+  closeButtonText: {
+    color: '#666',
   },
 });
 

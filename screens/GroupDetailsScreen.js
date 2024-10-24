@@ -1,5 +1,3 @@
-// Update the GroupDetailsScreen.js import and icon section:
-
 import React, { useState, useEffect, useContext } from 'react';
 import { 
   View, 
@@ -14,14 +12,13 @@ import {
   Dimensions
 } from 'react-native';
 import { AuthContext } from '../services/AuthService';
-import { getGroupMembers, joinStudyGroup, getAvailability, checkMembership,createJoinRequest } from '../services/DatabaseService';
+import { getGroupMembers, joinStudyGroup, getAvailability, checkMembership, createJoinRequest, removeGroupMember, getGroupCreator } from '../services/DatabaseService';
 import AvailabilityPicker from '../components/AvailabilityPicker';
 import GroupChat from '../components/GroupChat';
- 
 
 const { width } = Dimensions.get('window');
 
-// Simple Message Icon Component
+// Keep existing MessageIcon and CustomButton components...
 const MessageIcon = () => (
   <View style={styles.messageIconContainer}>
     <View style={styles.messageIconInner}>
@@ -29,6 +26,7 @@ const MessageIcon = () => (
     </View>
   </View>
 );
+
 const CustomButton = ({ onPress, title, style }) => (
   <TouchableOpacity 
     style={[styles.customButton, style]} 
@@ -38,13 +36,24 @@ const CustomButton = ({ onPress, title, style }) => (
     <Text style={styles.customButtonText}>{title}</Text>
   </TouchableOpacity>
 );
-const MemberCard = ({ name, userId, onPress }) => (
-  <TouchableOpacity style={styles.memberCard} onPress={onPress}>
-    <View style={styles.avatarCircle}>
-      <Text style={styles.avatarText}>{name[0].toUpperCase()}</Text>
-    </View>
-    <Text style={styles.memberName}>{name}</Text>
-  </TouchableOpacity>
+
+const MemberCard = ({ name, userId, isCreator, onPress, onKick }) => (
+  <View style={styles.memberCard}>
+    <TouchableOpacity style={styles.memberInfo} onPress={onPress}>
+      <View style={styles.avatarCircle}>
+        <Text style={styles.avatarText}>{name[0].toUpperCase()}</Text>
+      </View>
+      <Text style={styles.memberName}>{name}</Text>
+    </TouchableOpacity>
+    {isCreator && (
+      <TouchableOpacity 
+        style={styles.kickButton}
+        onPress={onKick}
+      >
+        <Text style={styles.kickButtonText}>×</Text>
+      </TouchableOpacity>
+    )}
+  </View>
 );
 
 const GroupDetailsScreen = ({ route, navigation }) => {
@@ -54,6 +63,7 @@ const GroupDetailsScreen = ({ route, navigation }) => {
   const [showChat, setShowChat] = useState(false);
   const { user } = useContext(AuthContext);
   const [isMember, setIsMember] = useState(false);
+  const [isCreator, setIsCreator] = useState(false);
 
   useEffect(() => {
     navigation.setOptions({
@@ -81,7 +91,18 @@ const GroupDetailsScreen = ({ route, navigation }) => {
   useEffect(() => {
     fetchGroupDetails();
     checkUserMembership();
+    checkIfCreator();
   }, []);
+
+  const checkIfCreator = async () => {
+    try {
+      const creatorId = await getGroupCreator(groupId);
+      setIsCreator(creatorId === user.id);
+    } catch (error) {
+      console.error('Error checking creator status:', error);
+    }
+  };
+
   const checkUserMembership = async () => {
     try {
       const membershipStatus = await checkMembership(groupId, user.id);
@@ -97,6 +118,9 @@ const GroupDetailsScreen = ({ route, navigation }) => {
       setMembers(groupMembers);
       const groupAvailability = await getAvailability(groupId);
       setAvailability(groupAvailability);
+      const creatorId = await getGroupCreator(groupId);
+    setIsCreator(creatorId === user.id);
+
     } catch (error) {
       console.error('Error fetching group details:', error);
     }
@@ -140,6 +164,35 @@ const GroupDetailsScreen = ({ route, navigation }) => {
     }
   };
     
+
+  const handleKickMember = async (memberId) => {
+    if (!isCreator) return;
+    
+    Alert.alert(
+      'Remove Member',
+      'Are you sure you want to remove this member from the group?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel'
+        },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await removeGroupMember(groupId, memberId);
+              // Refresh member list
+              fetchGroupDetails();
+            } catch (error) {
+              Alert.alert('Error', 'Failed to remove member from group');
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const renderMember = ({ item }) => (
     <MemberCard 
       name={item.name}
@@ -181,22 +234,25 @@ const GroupDetailsScreen = ({ route, navigation }) => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Availability</Text>
           <AvailabilityPicker 
-    groupId={groupId} 
-    availability={availability} 
-    onAvailabilityUpdate={handleAvailabilityUpdate}
-    isMember={isMember}  // Add this prop
-  />
+            groupId={groupId} 
+            availability={availability} 
+            onAvailabilityUpdate={handleAvailabilityUpdate}
+            isMember={isMember}
+          />
         </View>
 
-        <CustomButton 
-          title="Join Study Group" 
-          onPress={handleJoinGroup}
-          style={styles.joinButton}
-        />
+        {!isMember && (
+          <CustomButton 
+            title="Join Study Group" 
+            onPress={handleJoinGroup}
+            style={styles.joinButton}
+          />
+        )}
       </View>
     </SafeAreaView>
   );
 };
+
 
 const styles = StyleSheet.create({
   safeArea: {
@@ -227,9 +283,31 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
+    elevation: 2,
+    position: 'relative',
+  },
+  memberInfo: {
+    alignItems: 'center',
+  },
+  kickButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#ff4444',
+    justifyContent: 'center',
     alignItems: 'center',
     elevation: 2,
   },
+  kickButtonText: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: 'bold',
+    lineHeight: 22,
+  },
+
   avatarCircle: {
     width: 48,
     height: 48,

@@ -29,6 +29,7 @@ const HomeScreen = ({ navigation }) => {
 
     return unsubscribe;
   }, [navigation, user]);
+
   useEffect(() => {
     navigation.setOptions({
       headerRight: () => (
@@ -80,14 +81,19 @@ const HomeScreen = ({ navigation }) => {
       }
     });
   };
+
   const applyFilters = async () => {
     await fetchStudyGroups();
-    setIsFilterModalVisible(false);
+    // Don't close the modal when applying filters
   };
+
   const clearFilters = () => {
     setSelectedSubjects([]);
-    setIsFilterModalVisible(false);
     fetchStudyGroups();
+  };
+
+  const closeFilterModal = () => {
+    setIsFilterModalVisible(false);
   };
 
 
@@ -143,7 +149,7 @@ const HomeScreen = ({ navigation }) => {
       visible={isFilterModalVisible}
       transparent={true}
       animationType="slide"
-      onRequestClose={() => setIsFilterModalVisible(false)}
+      onRequestClose={closeFilterModal}
     >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
@@ -177,7 +183,7 @@ const HomeScreen = ({ navigation }) => {
           </View>
           <TouchableOpacity 
             style={styles.closeButton}
-            onPress={() => setIsFilterModalVisible(false)}
+            onPress={closeFilterModal}
           >
             <Text style={styles.closeButtonText}>Back</Text>
           </TouchableOpacity>
@@ -185,6 +191,7 @@ const HomeScreen = ({ navigation }) => {
       </View>
     </Modal>
   );
+
 
 
 

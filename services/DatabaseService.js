@@ -589,6 +589,39 @@ export const getUserProfile = (userId) => {
     });
   });
 };
+export const getGroupCreator = (groupId) => {
+  const db = openDatabase();
+  return new Promise((resolve, reject) => {
+    db.transaction((tx) => {
+      tx.executeSql(
+        'SELECT creator_id FROM study_groups WHERE id = ?',
+        [groupId],
+        (_, { rows }) => {
+          if (rows.length > 0) {
+            resolve(rows.item(0).creator_id);
+          } else {
+            resolve(null);
+          }
+        },
+        (_, error) => reject(error)
+      );
+    });
+  });
+};
+
+export const removeGroupMember = (groupId, userId) => {
+  const db = openDatabase();
+  return new Promise((resolve, reject) => {
+    db.transaction((tx) => {
+      tx.executeSql(
+        'DELETE FROM group_members WHERE group_id = ? AND user_id = ?',
+        [groupId, userId],
+        (_, result) => resolve(result),
+        (_, error) => reject(error)
+      );
+    });
+  });
+};
 
 export const updateUserProfile = (userId, description, subjectsOfInterest) => {
   const db = openDatabase();

@@ -14,9 +14,10 @@ import {
   Dimensions
 } from 'react-native';
 import { AuthContext } from '../services/AuthService';
-import { getGroupMembers, joinStudyGroup, getAvailability, checkMembership } from '../services/DatabaseService';
+import { getGroupMembers, joinStudyGroup, getAvailability, checkMembership,createJoinRequest } from '../services/DatabaseService';
 import AvailabilityPicker from '../components/AvailabilityPicker';
 import GroupChat from '../components/GroupChat';
+ 
 
 const { width } = Dimensions.get('window');
 
@@ -103,19 +104,42 @@ const GroupDetailsScreen = ({ route, navigation }) => {
 
   const handleJoinGroup = async () => {
     try {
+      console.log('Starting join group process...', { groupId, user: user });
+      
+      if (!groupId || !user?.id) {
+        throw new Error('Missing groupId or userId');
+      }
+      
       const isMember = await checkMembership(groupId, user.id);
+      console.log('Membership check result:', isMember);
+      
       if (isMember) {
         Alert.alert('Already a Member', 'You are already part of this study group');
         return;
       }
-      await joinStudyGroup(groupId, user.id);
-      Alert.alert('Welcome!', 'You have successfully joined the group');
-      fetchGroupDetails();
+      
+      console.log('Creating join request...');
+      const result = await createJoinRequest(groupId, user.id);
+      console.log('Join request created:', result);
+      
+      Alert.alert(
+        'Request Sent', 
+        'Your request to join the group has been sent successfully.'
+      );
     } catch (error) {
-      Alert.alert('Error', 'Unable to join the group. Please try again.');
+      console.error('Join request error:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
+      
+      Alert.alert(
+        'Error', 
+        'Unable to send join request: ' + error.message
+      );
     }
   };
-
+    
   const renderMember = ({ item }) => (
     <MemberCard 
       name={item.name}

@@ -9,7 +9,7 @@ import { AuthContext } from '../services/AuthService';
 import ProfileScreen from '../screens/ProfileScreen';
 import UserListScreen from '../screens/UserListScreen';
 import DashboardScreen from '../screens/DashboardScreen';
-
+import NotificationScreen from '../screens/NotificationScreen';
 const Stack = createStackNavigator();
 
 const AppNavigator = () => {
@@ -34,6 +34,13 @@ const AppNavigator = () => {
             component={HomeScreen}
             options={{ title: 'Study Groups' }}
           />
+          <Stack.Screen 
+  name="Notifications" 
+  component={NotificationScreen}
+  options={{ title: 'Notifications' }}
+/>
+
+
           <Stack.Screen 
             name="CreateGroup" 
             component={CreateGroupScreen}

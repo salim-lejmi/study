@@ -3,7 +3,7 @@ import { View, FlatList, Button, StyleSheet, Alert, Modal, TouchableOpacity, Tex
 import { AuthContext } from '../services/AuthService';
 import { getStudyGroups, getUniqueSubjects, deleteStudyGroup } from '../services/DatabaseService';
 import StudyGroupItem from '../components/StudyGroupItem';
-
+import NotificationButton from '../components/NotificationButton';
 
 const HomeScreen = ({ navigation }) => {
   const [studyGroups, setStudyGroups] = useState([]);
@@ -32,18 +32,25 @@ const HomeScreen = ({ navigation }) => {
   useEffect(() => {
     navigation.setOptions({
       headerRight: () => (
-        <TouchableOpacity
-          style={styles.headerButton}
-          onPress={() => navigation.navigate('Profile')}
-        >
-          <View style={styles.profileIcon}>
-            <Text style={styles.profileIconText}>{user?.name?.[0]?.toUpperCase()}</Text>
-          </View>
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row' }}>
+          <NotificationButton
+            onPress={() => navigation.navigate('Notifications')}
+            userId={user?.id}
+          />
+          <TouchableOpacity
+            style={styles.headerButton}
+            onPress={() => navigation.navigate('Profile')}
+          >
+            <View style={styles.profileIcon}>
+              <Text style={styles.profileIconText}>{user?.name?.[0]?.toUpperCase()}</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
       ),
     });
   }, [navigation, user]);
   
+    
   const fetchSubjects = async () => {
     try {
       const availableSubjects = await getUniqueSubjects();

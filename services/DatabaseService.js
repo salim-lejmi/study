@@ -1,6 +1,7 @@
 import * as SQLite from 'expo-sqlite/legacy';
 
 const DB_NAME = 'studygroups.db';
+const DEBUG = true;  // Enable detailed logging
 
 let database = null;
 export const openDatabase = () => {
@@ -45,6 +46,45 @@ export const initDatabase = () => {
   return new Promise((resolve, reject) => {
     db.transaction(
       (tx) => {
+        tx.executeSql(`
+          ALTER TABLE notifications ADD COLUMN request_id INTEGER
+          REFERENCES join_requests(id)
+        `, [], 
+        () => {
+          logDebug('Added request_id column to notifications table');
+        },
+        (_, error) => {
+          // Column might already exist, which is fine
+          logDebug('Column request_id might already exist:', error);
+        });
+        tx.executeSql(`
+          CREATE TABLE IF NOT EXISTS notifications (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            recipient_id INTEGER NOT NULL,
+            sender_id INTEGER,
+            type TEXT NOT NULL,
+            content TEXT NOT NULL,
+            group_id INTEGER,
+            status TEXT DEFAULT 'unread',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (recipient_id) REFERENCES users (id),
+            FOREIGN KEY (sender_id) REFERENCES users (id),
+            FOREIGN KEY (group_id) REFERENCES study_groups (id)
+          )
+        `);
+
+        // Join requests table
+        tx.executeSql(`
+          CREATE TABLE IF NOT EXISTS join_requests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            group_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            status TEXT DEFAULT 'pending',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (group_id) REFERENCES study_groups (id),
+            FOREIGN KEY (user_id) REFERENCES users (id)
+          )
+        `);
         // Enable foreign keys
         tx.executeSql('PRAGMA foreign_keys = ON;');
 
@@ -563,4 +603,297 @@ export const updateUserProfile = (userId, description, subjectsOfInterest) => {
     });
   });
 };
+
+export const getUnreadNotificationCount = (userId) => {
+  const db = openDatabase();
+  return new Promise((resolve, reject) => {
+    db.transaction((tx) => {
+      tx.executeSql(
+        'SELECT COUNT(*) as count FROM notifications WHERE recipient_id = ? AND status = "unread"',
+        [userId],
+        (_, { rows }) => resolve(rows.item(0).count),
+        (_, error) => reject(error)
+      );
+    });
+  });
+};
+
+
+export const getNotifications = (userId) => {
+  const db = openDatabase();
+  return new Promise((resolve, reject) => {
+    db.transaction((tx) => {
+      tx.executeSql(
+        `SELECT 
+          n.*,
+          s.name as sender_name,
+          sg.name as group_name,
+          jr.id as request_id
+         FROM notifications n
+         LEFT JOIN users s ON n.sender_id = s.id
+         LEFT JOIN study_groups sg ON n.group_id = sg.id
+         LEFT JOIN join_requests jr ON n.request_id = jr.id
+         WHERE n.recipient_id = ?
+         ORDER BY n.created_at DESC`,
+        [userId],
+        (_, { rows }) => resolve(rows._array),
+        (_, error) => reject(error)
+      );
+    });
+  });
+};
+
+
+export const markNotificationsAsRead = (userId) => {
+  const db = openDatabase();
+  return new Promise((resolve, reject) => {
+    db.transaction((tx) => {
+      tx.executeSql(
+        'UPDATE notifications SET status = "read" WHERE recipient_id = ? AND status = "unread"',
+        [userId],
+        (_, result) => resolve(result),
+        (_, error) => reject(error)
+      );
+    });
+  });
+};
+
+export const handleJoinRequest = (requestId, isAccepted, notificationContent) => {
+  const db = openDatabase();
+  return new Promise((resolve, reject) => {
+    db.transaction((tx) => {
+      tx.executeSql(
+        'SELECT * FROM join_requests WHERE id = ?',
+        [requestId],
+        (_, { rows }) => {
+          if (rows.length === 0) {
+            reject(new Error('Request not found'));
+            return;
+          }
+          
+          const request = rows.item(0);
+          const status = isAccepted ? 'accepted' : 'rejected';
+          
+          // Update request status
+          tx.executeSql(
+            'UPDATE join_requests SET status = ? WHERE id = ?',
+            [status, requestId]
+          );
+          
+          if (isAccepted) {
+            // Add user to group if accepted
+            tx.executeSql(
+              'INSERT INTO group_members (group_id, user_id) VALUES (?, ?)',
+              [request.group_id, request.user_id]
+            );
+          }
+          
+          // Create notification for the requesting user
+          tx.executeSql(
+            `INSERT INTO notifications (
+              recipient_id, type, content, group_id, status
+            ) VALUES (?, ?, ?, ?, ?)`,
+            [
+              request.user_id,
+              'join_request_response',
+              notificationContent,
+              request.group_id,
+              'unread'
+            ],
+            (_, { insertId }) => resolve(insertId),
+            (_, error) => reject(error)
+          );
+        },
+        (_, error) => reject(error)
+      );
+    });
+  });
+};
+// Helper to check if request already exists
+const checkExistingRequest = (tx, groupId, userId) => {
+  return new Promise((resolve, reject) => {
+    tx.executeSql(
+      'SELECT * FROM join_requests WHERE group_id = ? AND user_id = ? AND status = "pending"',
+      [groupId, userId],
+      (_, { rows }) => {
+        resolve(rows.length > 0);
+      },
+      (_, error) => {
+        console.error('Error checking existing request:', error);
+        reject(error);
+      }
+    );
+  });
+};
+
+const logDebug = (message, data = '') => {
+  if (DEBUG) {
+    if (data) {
+      console.log(`[DEBUG] ${message}:`, data);
+    } else {
+      console.log(`[DEBUG] ${message}`);
+    }
+  }
+};
+
+export const createJoinRequest = async (groupId, userId) => {
+  logDebug('Starting createJoinRequest', { groupId, userId });
+  
+  const db = openDatabase();
+  if (!db) {
+    console.error('Failed to open database');
+    return Promise.reject(new Error('Database connection failed'));
+  }
+
+  return new Promise((resolve, reject) => {
+    logDebug('Beginning database transaction');
+    
+    db.transaction(tx => {
+      // Step 1: Verify the group exists and get creator info
+      const checkGroupQuery = 'SELECT creator_id, name FROM study_groups WHERE id = ?';
+      logDebug('Executing query', checkGroupQuery);
+      
+      tx.executeSql(
+        checkGroupQuery,
+        [groupId],
+        (_, { rows }) => {
+          logDebug('Group query results', rows);
+          
+          if (rows.length === 0) {
+            const error = new Error(`Study group ${groupId} not found`);
+            console.error(error);
+            reject(error);
+            return;
+          }
+          
+          const creatorId = rows.item(0).creator_id;
+          const groupName = rows.item(0).name;
+          logDebug('Found group info', { creatorId, groupName });
+
+          // Step 2: Check if user is already a member
+          const checkMembershipQuery = 'SELECT * FROM group_members WHERE group_id = ? AND user_id = ?';
+          logDebug('Checking existing membership');
+          
+          tx.executeSql(
+            checkMembershipQuery,
+            [groupId, userId],
+            (_, { rows: memberRows }) => {
+              logDebug('Membership check results', memberRows);
+              
+              if (memberRows.length > 0) {
+                const error = new Error('User is already a member of this group');
+                console.error(error);
+                reject(error);
+                return;
+              }
+
+              // Step 3: Check for existing pending request
+              const checkRequestQuery = 'SELECT * FROM join_requests WHERE group_id = ? AND user_id = ? AND status = "pending"';
+              logDebug('Checking existing requests');
+              
+              tx.executeSql(
+                checkRequestQuery,
+                [groupId, userId],
+                (_, { rows: requestRows }) => {
+                  logDebug('Existing request check results', requestRows);
+                  
+                  if (requestRows.length > 0) {
+                    const error = new Error('A pending request already exists');
+                    console.error(error);
+                    reject(error);
+                    return;
+                  }
+
+                  // Step 4: Get user info for notification
+                  const getUserQuery = 'SELECT name FROM users WHERE id = ?';
+                  logDebug('Getting user info');
+                  
+                  tx.executeSql(
+                    getUserQuery,
+                    [userId],
+                    (_, { rows: userRows }) => {
+                      logDebug('User info results', userRows);
+                      
+                      if (userRows.length === 0) {
+                        const error = new Error(`User ${userId} not found`);
+                        console.error(error);
+                        reject(error);
+                        return;
+                      }
+
+                      const userName = userRows.item(0).name;
+                      
+                      // Step 5: Create the join request
+                      const createRequestQuery = `
+                      INSERT INTO join_requests (group_id, user_id, status, created_at) 
+                      VALUES (?, ?, "pending", datetime('now'))
+                    `;
+                    
+                    tx.executeSql(
+                      createRequestQuery,
+                      [groupId, userId],
+                      (_, { insertId: requestId }) => {
+                        logDebug('Join request created', { requestId });
+              
+                        const notificationContent = `${userName} wants to join ${groupName}`;
+                        const createNotificationQuery = `
+                          INSERT INTO notifications (
+                            recipient_id, sender_id, type, content, group_id, status, created_at, request_id
+                          ) VALUES (?, ?, ?, ?, ?, ?, datetime('now'), ?)
+                        `;
+                        
+                        tx.executeSql(
+                          createNotificationQuery,
+                          [creatorId, userId, 'join_request', notificationContent, groupId, 'unread', requestId],
+                          (_, { insertId: notificationId }) => {
+                            logDebug('Notification created', { notificationId, requestId });
+                            resolve({ requestId, notificationId });
+                          },
+                          (_, error) => {
+                            console.error('Error creating notification:', error);
+                            reject(new Error(`Failed to create notification: ${error.message}`));
+                          }
+                        );
+                      },
+                      (_, error) => {
+                        console.error('Error creating join request:', error);
+                        reject(new Error(`Failed to create join request: ${error.message}`));
+                      }
+                    );
+                  });
+                },
+              
+              
+                    (_, error) => {
+                      console.error('Error getting user info:', error);
+                      reject(new Error(`Failed to get user info: ${error.message}`));
+                    }
+                  );
+                },
+                (_, error) => {
+                  console.error('Error checking existing requests:', error);
+                  reject(new Error(`Failed to check existing requests: ${error.message}`));
+                }
+              );
+            },
+            (_, error) => {
+              console.error('Error checking membership:', error);
+              reject(new Error(`Failed to check membership: ${error.message}`));
+            }
+          );
+        },
+        (_, error) => {
+          console.error('Error checking group:', error);
+          reject(new Error(`Failed to check group: ${error.message}`));
+        }
+      );
+    },
+    (error) => {
+      console.error('Transaction failed:', error);
+      reject(new Error(`Transaction failed: ${error.message}`));
+    },
+    () => {
+      logDebug('Transaction completed successfully');
+    });
+  }
 

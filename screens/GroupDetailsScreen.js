@@ -52,6 +52,7 @@ const GroupDetailsScreen = ({ route, navigation }) => {
   const [availability, setAvailability] = useState([]);
   const [showChat, setShowChat] = useState(false);
   const { user } = useContext(AuthContext);
+  const [isMember, setIsMember] = useState(false);
 
   useEffect(() => {
     navigation.setOptions({
@@ -78,7 +79,16 @@ const GroupDetailsScreen = ({ route, navigation }) => {
 
   useEffect(() => {
     fetchGroupDetails();
+    checkUserMembership();
   }, []);
+  const checkUserMembership = async () => {
+    try {
+      const membershipStatus = await checkMembership(groupId, user.id);
+      setIsMember(membershipStatus);
+    } catch (error) {
+      console.error('Error checking membership:', error);
+    }
+  };
 
   const fetchGroupDetails = async () => {
     try {
@@ -147,10 +157,11 @@ const GroupDetailsScreen = ({ route, navigation }) => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Availability</Text>
           <AvailabilityPicker 
-            groupId={groupId} 
-            availability={availability} 
-            onAvailabilityUpdate={setAvailability}
-          />
+    groupId={groupId} 
+    availability={availability} 
+    onAvailabilityUpdate={handleAvailabilityUpdate}
+    isMember={isMember}  // Add this prop
+  />
         </View>
 
         <CustomButton 

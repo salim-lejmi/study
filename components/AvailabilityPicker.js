@@ -5,7 +5,7 @@ import { setAvailability, checkAvailabilityExists, getAvailability } from '../se
 
 const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
-const AvailabilityPicker = ({ groupId, availability, onAvailabilityUpdate }) => {
+const AvailabilityPicker = ({ groupId, availability, onAvailabilityUpdate, isMember = false }) => {
   const [selectedDay, setSelectedDay] = useState(null);
   const [showStartPicker, setShowStartPicker] = useState(false);
   const [showEndPicker, setShowEndPicker] = useState(false);
@@ -40,6 +40,11 @@ const AvailabilityPicker = ({ groupId, availability, onAvailabilityUpdate }) => 
   };
 
   const handleStartTimeChange = (event, selectedDate) => {
+    if (!isMember) {
+      Alert.alert('Access Denied', 'Only group members can set availability');
+      return;
+    }
+    
     setShowStartPicker(false);
     if (selectedDate) {
       setStartTime(selectedDate);
@@ -52,6 +57,11 @@ const AvailabilityPicker = ({ groupId, availability, onAvailabilityUpdate }) => 
   };
 
   const handleEndTimeChange = (event, selectedDate) => {
+    if (!isMember) {
+      Alert.alert('Access Denied', 'Only group members can set availability');
+      return;
+    }
+
     setShowEndPicker(false);
     if (selectedDate) {
       if (selectedDate <= startTime) {
@@ -63,6 +73,11 @@ const AvailabilityPicker = ({ groupId, availability, onAvailabilityUpdate }) => 
   };
 
   const handleSetAvailability = async () => {
+    if (!isMember) {
+      Alert.alert('Access Denied', 'Only group members can set availability');
+      return;
+    }
+
     if (!selectedDay) {
       Alert.alert('Error', 'Please select a day');
       return;
@@ -87,6 +102,14 @@ const AvailabilityPicker = ({ groupId, availability, onAvailabilityUpdate }) => 
     }
   };
 
+  const handleDaySelect = (day) => {
+    if (!isMember) {
+      Alert.alert('Access Denied', 'Only group members can set availability');
+      return;
+    }
+    setSelectedDay(day);
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.sectionTitle}>Select Day:</Text>
@@ -98,7 +121,7 @@ const AvailabilityPicker = ({ groupId, availability, onAvailabilityUpdate }) => 
               styles.dayButton,
               selectedDay === day && styles.selectedDayButton
             ]}
-            onPress={() => setSelectedDay(day)}
+            onPress={() => handleDaySelect(day)}
           >
             <Text style={[
               styles.dayButtonText,
@@ -116,7 +139,7 @@ const AvailabilityPicker = ({ groupId, availability, onAvailabilityUpdate }) => 
             <Text>Start Time:</Text>
             <Button
               title={formatTime(startTime)}
-              onPress={() => setShowStartPicker(true)}
+              onPress={() => isMember ? setShowStartPicker(true) : Alert.alert('Access Denied', 'Only group members can set availability')}
             />
           </View>
 
@@ -124,7 +147,7 @@ const AvailabilityPicker = ({ groupId, availability, onAvailabilityUpdate }) => 
             <Text>End Time:</Text>
             <Button
               title={formatTime(endTime)}
-              onPress={() => setShowEndPicker(true)}
+              onPress={() => isMember ? setShowEndPicker(true) : Alert.alert('Access Denied', 'Only group members can set availability')}
             />
           </View>
 
@@ -148,7 +171,10 @@ const AvailabilityPicker = ({ groupId, availability, onAvailabilityUpdate }) => 
             />
           )}
 
-          <Button title="Set Availability" onPress={handleSetAvailability} />
+          <Button 
+            title="Set Availability" 
+            onPress={handleSetAvailability}
+          />
         </View>
       )}
 
@@ -161,6 +187,7 @@ const AvailabilityPicker = ({ groupId, availability, onAvailabilityUpdate }) => 
     </View>
   );
 };
+
 
 const styles = StyleSheet.create({
   container: {

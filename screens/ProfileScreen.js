@@ -15,7 +15,7 @@ const ProfileScreen = ({ route, navigation }) => {
   const { user: currentUser } = useContext(AuthContext);
   const userId = route.params?.userId || currentUser.id;
   const isOwnProfile = userId === currentUser.id;
-  
+
   const [profile, setProfile] = useState({
     name: '',
     email: '',
@@ -62,7 +62,7 @@ const ProfileScreen = ({ route, navigation }) => {
         <Text style={styles.name}>{profile.name}</Text>
         <Text style={styles.email}>{profile.email}</Text>
       </View>
-  
+
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Description</Text>
         {isEditing ? (
@@ -75,11 +75,11 @@ const ProfileScreen = ({ route, navigation }) => {
           />
         ) : (
           <Text style={styles.content}>
-            {profile.description || 'No description added yet'}
+            {profile.description ? profile.description : 'No description added yet'}
           </Text>
         )}
       </View>
-  
+
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Subjects of Interest</Text>
         {isEditing ? (
@@ -92,11 +92,11 @@ const ProfileScreen = ({ route, navigation }) => {
           />
         ) : (
           <Text style={styles.content}>
-            {profile.subjects_of_interest || 'No subjects added yet'}
+            {profile.subjects_of_interest ? profile.subjects_of_interest : 'No subjects added yet'}
           </Text>
         )}
       </View>
-  
+
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Joined Groups</Text>
         {profile.joined_groups.length > 0 ? (
@@ -107,8 +107,8 @@ const ProfileScreen = ({ route, navigation }) => {
           <Text style={styles.content}>No groups joined yet</Text>
         )}
       </View>
-  
-      {isOwnProfile && (
+
+      {isOwnProfile ? (
         <View style={styles.buttonContainer}>
           {isEditing ? (
             <>
@@ -131,9 +131,9 @@ const ProfileScreen = ({ route, navigation }) => {
             </TouchableOpacity>
           )}
         </View>
-      )}
-  
-      {currentUser?.is_admin && !isOwnProfile && (
+      ) : null}
+
+      {currentUser?.is_admin && !isOwnProfile ? (
         <View style={styles.buttonContainer}>
           <TouchableOpacity
             style={[styles.button, styles.deleteButton]}
@@ -163,7 +163,7 @@ const ProfileScreen = ({ route, navigation }) => {
             <Text style={styles.buttonText}>Delete User</Text>
           </TouchableOpacity>
         </View>
-      )}
+      ) : null}
     </ScrollView>
   );
 };
@@ -251,7 +251,6 @@ const styles = StyleSheet.create({
   deleteButton: {
     backgroundColor: '#ff4444',
   },
-  
 });
 
 export default ProfileScreen;

@@ -325,6 +325,39 @@ export const getDashboardStats = () => {
   });
 };
 
+
+export const getGroupMembers = (groupId) => {
+  const db = openDatabase();
+  return new Promise((resolve, reject) => {
+    db.transaction((tx) => {
+      tx.executeSql(
+        `SELECT users.* 
+         FROM users 
+         INNER JOIN group_members 
+         ON users.id = group_members.user_id 
+         WHERE group_members.group_id = ?`,
+        [groupId],
+        (_, { rows }) => resolve(rows._array),
+        (_, error) => reject(error)
+      );
+    });
+  });
+};
+export const removeGroupMember = (groupId, userId) => {
+  const db = openDatabase();
+  return new Promise((resolve, reject) => {
+    db.transaction((tx) => {
+      tx.executeSql(
+        'DELETE FROM group_members WHERE group_id = ? AND user_id = ?',
+        [groupId, userId],
+        (_, result) => resolve(result),
+        (_, error) => reject(error)
+      );
+    });
+  });
+};
+
+
 // Helper function to check if email exists
 export const checkEmailExists = async (email) => {
   const db = openDatabase();
@@ -460,23 +493,6 @@ export const joinStudyGroup = (groupId, userId) => {
   });
 };
 
-export const getGroupMembers = (groupId) => {
-  const db = openDatabase();
-  return new Promise((resolve, reject) => {
-    db.transaction((tx) => {
-      tx.executeSql(
-        `SELECT users.* 
-         FROM users 
-         INNER JOIN group_members 
-         ON users.id = group_members.user_id 
-         WHERE group_members.group_id = ?`,
-        [groupId],
-        (_, { rows }) => resolve(rows._array),
-        (_, error) => reject(error)
-      );
-    });
-  });
-};
 
 export const setAvailability = (groupId, day, startTime, endTime) => {
   const db = openDatabase();
@@ -609,19 +625,6 @@ export const getGroupCreator = (groupId) => {
   });
 };
 
-export const removeGroupMember = (groupId, userId) => {
-  const db = openDatabase();
-  return new Promise((resolve, reject) => {
-    db.transaction((tx) => {
-      tx.executeSql(
-        'DELETE FROM group_members WHERE group_id = ? AND user_id = ?',
-        [groupId, userId],
-        (_, result) => resolve(result),
-        (_, error) => reject(error)
-      );
-    });
-  });
-};
 
 export const updateUserProfile = (userId, description, subjectsOfInterest) => {
   const db = openDatabase();

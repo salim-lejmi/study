@@ -197,9 +197,12 @@ const GroupDetailsScreen = ({ route, navigation }) => {
     <MemberCard 
       name={item.name}
       userId={item.id}
+      isCreator={isCreator && item.id !== user.id}  // Only show kick button if creator AND not self
       onPress={() => navigation.navigate('Profile', { userId: item.id })}
+      onKick={() => handleKickMember(item.id)}
     />
   );
+  
   
   const handleAvailabilityUpdate = (newAvailability) => {
     setAvailability(newAvailability);

@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { View, FlatList, Button, StyleSheet, Alert, Modal, TouchableOpacity, Text } from 'react-native';
+import { View, FlatList, Button, StyleSheet, Alert, Modal, TouchableOpacity,SafeAreaView , Text } from 'react-native';
 import { AuthContext } from '../services/AuthService';
 import { getStudyGroups, getUniqueSubjects, deleteStudyGroup } from '../services/DatabaseService';
 import StudyGroupItem from '../components/StudyGroupItem';
 import NotificationButton from '../components/NotificationButton';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const HomeScreen = ({ navigation }) => {
   const [studyGroups, setStudyGroups] = useState([]);
@@ -220,7 +221,7 @@ const HomeScreen = ({ navigation }) => {
       />
   
       {/* Admin Buttons (only for admin users) */}
-      {user?.is_admin ? (
+      {user?.is_admin && (
         <View style={styles.adminButtonsContainer}>
           <TouchableOpacity
             style={[styles.adminButton, { marginRight: 10 }]}
@@ -235,128 +236,82 @@ const HomeScreen = ({ navigation }) => {
             <Text style={styles.adminButtonText}>Dashboard</Text>
           </TouchableOpacity>
         </View>
-      ) : null}
+      )}
   
       {/* Action Buttons */}
       <View style={styles.actionButtonsContainer}>
-        <Button title="Create New Group" onPress={handleCreateGroup} />
-        <Button title="Logout" onPress={handleLogout} />
+        <TouchableOpacity 
+          style={styles.stylishButton} 
+          onPress={handleCreateGroup}
+        >
+          <Text style={styles.stylishButtonText}>Create New Group</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.stylishButton} 
+          onPress={handleLogout}
+        >
+          <Text style={styles.stylishButtonText}>Logout</Text>
+        </TouchableOpacity>
       </View>
   
       {/* Filter Modal */}
       <FilterModal />
     </View>
   );
+  
   };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 16,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginBottom: 10,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: 'white',
-    borderRadius: 10,
-    padding: 20,
-    width: '80%',
-    maxHeight: '80%',
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 15,
-    textAlign: 'center',
-  },
-  subjectList: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: 10,
-  },
-  subjectItem: {
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#f0f0f0',
-    marginBottom: 10,
-  },
-  selectedSubject: {
-    backgroundColor: '#007AFF',
-  },
-  subjectText: {
-    color: '#333',
-  },
-  selectedSubjectText: {
-    color: 'white',
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginTop: 20,
-  },
-  button: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 5,
-    minWidth: 100,
-    alignItems: 'center',
-  },
-  buttonText: {
-    color: 'white',
-    fontWeight: '500',
-  },
-  closeButton: {
-    marginTop: 15,
-    alignItems: 'center',
-  },
-  closeButtonText: {
-    color: '#666',
-  },
-  profileIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#6200ee',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 15,
-  },
-  profileIconText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      padding: 16,
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      marginBottom: 10,
+    },
+    actionButtonsContainer: {
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+      marginTop: 20,
+    },
+    stylishButton: {
+      flex: 1,
+      backgroundColor: '#6200ee',
+      paddingVertical: 15,
+      marginHorizontal: 5,
+      borderRadius: 25,
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 5,
+      elevation: 5,  // For Android shadow effect
+    },
+    stylishButtonText: {
+      color: 'white',
+      fontSize: 18,
+      fontWeight: '600',
+    },
+    adminButtonsContainer: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      padding: 10,
+      marginBottom: 10,
+    },
+    adminButton: {
+      backgroundColor: '#6200ee',
+      padding: 10,
+      borderRadius: 5,
+      flex: 1,
+    },
+    adminButtonText: {
+      color: 'white',
+      textAlign: 'center',
+      fontWeight: 'bold',
+    },
+  });
   
-  adminButtonsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    padding: 10,
-    marginBottom: 10,
-  },
-  adminButton: {
-    backgroundColor: '#6200ee',
-    padding: 10,
-    borderRadius: 5,
-    flex: 1,
-  },
-  adminButtonText: {
-    color: 'white',
-    textAlign: 'center',
-    fontWeight: 'bold',
-  },
-  
-});
-
 export default HomeScreen;

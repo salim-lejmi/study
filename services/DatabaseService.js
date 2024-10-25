@@ -176,17 +176,44 @@ export const initDatabase = () => {
         `);
 
         // Create 'availability' table
-        tx.executeSql(`
-          CREATE TABLE IF NOT EXISTS availability (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            group_id INTEGER,
-            day TEXT,
-            start_time TEXT,
-            end_time TEXT,
-            FOREIGN KEY (group_id) REFERENCES study_groups (id)
-          )
-        `);
         tx.executeSql(
+          "SELECT sql FROM sqlite_master WHERE type='table' AND name='availability'",
+          [],
+          (_, { rows }) => {
+            const tableExists = rows.length > 0;
+    
+            if (!tableExists) {
+              // Create availability table if it doesn't exist
+              tx.executeSql(`
+                CREATE TABLE IF NOT EXISTS availability (
+                  id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  group_id INTEGER,
+                  day TEXT,
+                  start_time TEXT,
+                  end_time TEXT,
+                  location TEXT DEFAULT 'Not specified',
+                  FOREIGN KEY (group_id) REFERENCES study_groups (id)
+                )
+              `);
+            } else {
+              // Check if location column exists
+              tx.executeSql(
+                "PRAGMA table_info(availability)", 
+                [], 
+                (_, { rows: columnInfo }) => {
+                  const hasLocation = columnInfo._array.some(col => col.name === 'location');
+    
+                  if (!hasLocation) {
+                    tx.executeSql(
+                      "ALTER TABLE availability ADD COLUMN location TEXT DEFAULT 'Not specified'"
+                    );
+                  }
+                }
+              );
+            }
+          }
+        );
+            tx.executeSql(
           "PRAGMA table_info(users)",
           [],
           (_, { rows: columnInfo }) => {
@@ -494,20 +521,19 @@ export const joinStudyGroup = (groupId, userId) => {
 };
 
 
-export const setAvailability = (groupId, day, startTime, endTime) => {
+export const setAvailability = (groupId, day, startTime, endTime, location) => {
   const db = openDatabase();
   return new Promise((resolve, reject) => {
     db.transaction((tx) => {
       tx.executeSql(
-        'INSERT INTO availability (group_id, day, start_time, end_time) VALUES (?, ?, ?, ?)',
-        [groupId, day, startTime, endTime],
+        'INSERT INTO availability (group_id, day, start_time, end_time, location) VALUES (?, ?, ?, ?, ?)',
+        [groupId, day, startTime, endTime, location],
         (_, { insertId }) => resolve(insertId),
         (_, error) => reject(error)
       );
     });
   });
 };
-
 export const getAvailability = (groupId) => {
   const db = openDatabase();
   return new Promise((resolve, reject) => {

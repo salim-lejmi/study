@@ -1,5 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, Button, StyleSheet, Alert, TouchableOpacity } from 'react-native';
+import { 
+  View, 
+  Text, 
+  Button, 
+  StyleSheet, 
+  Alert, 
+  TouchableOpacity,
+  TextInput 
+} from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { setAvailability, checkAvailabilityExists, getAvailability } from '../services/DatabaseService';
 
@@ -11,6 +19,7 @@ const AvailabilityPicker = ({ groupId, availability, onAvailabilityUpdate, isMem
   const [showEndPicker, setShowEndPicker] = useState(false);
   const [startTime, setStartTime] = useState(new Date());
   const [endTime, setEndTime] = useState(new Date());
+  const [location, setLocation] = useState('');
 
   const formatTime = (date) => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
@@ -83,6 +92,11 @@ const AvailabilityPicker = ({ groupId, availability, onAvailabilityUpdate, isMem
       return;
     }
 
+    if (!location.trim()) {
+      Alert.alert('Error', 'Please enter a location');
+      return;
+    }
+
     const formattedStartTime = formatTime(startTime);
     const formattedEndTime = formatTime(endTime);
 
@@ -92,15 +106,17 @@ const AvailabilityPicker = ({ groupId, availability, onAvailabilityUpdate, isMem
         return;
       }
 
-      await setAvailability(groupId, selectedDay, formattedStartTime, formattedEndTime);
+      await setAvailability(groupId, selectedDay, formattedStartTime, formattedEndTime, location);
       const newAvailability = await getAvailability(groupId);
       onAvailabilityUpdate(newAvailability);
+      setLocation(''); // Reset location after successful submission
       Alert.alert('Success', 'Availability set successfully');
     } catch (error) {
       console.error('Error setting availability:', error);
       Alert.alert('Error', 'Failed to set availability');
     }
   };
+
 
   const handleDaySelect = (day) => {
     if (!isMember) {
@@ -151,6 +167,17 @@ const AvailabilityPicker = ({ groupId, availability, onAvailabilityUpdate, isMem
             />
           </View>
 
+          <View style={styles.locationContainer}>
+            <Text>Location:</Text>
+            <TextInput
+              style={styles.locationInput}
+              placeholder="Enter location"
+              value={location}
+              onChangeText={setLocation}
+              editable={isMember}
+            />
+          </View>
+
           {showStartPicker && (
             <DateTimePicker
               value={startTime}
@@ -178,10 +205,10 @@ const AvailabilityPicker = ({ groupId, availability, onAvailabilityUpdate, isMem
         </View>
       )}
 
-      <Text style={styles.sectionTitle}>Current Availability:</Text>
+<Text style={styles.sectionTitle}>Current Availability:</Text>
       {availability.map((slot, index) => (
         <Text key={index} style={styles.availabilityText}>
-          {slot.day}: {slot.start_time} - {slot.end_time}
+          {slot.day}: {slot.start_time} - {slot.end_time} @ {slot.location}
         </Text>
       ))}
     </View>
@@ -234,6 +261,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginVertical: 4,
   },
+  locationContainer: {
+    marginVertical: 8,
+  },
+  locationInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 4,
+    padding: 8,
+    marginTop: 4,
+    backgroundColor: '#fff',
+  },
+
 });
 
 export default AvailabilityPicker;

@@ -202,15 +202,21 @@ export const initDatabase = () => {
                 [], 
                 (_, { rows: columnInfo }) => {
                   const hasLocation = columnInfo._array.some(col => col.name === 'location');
-    
+                  const hasUserId = columnInfo._array.some(col => col.name === 'user_id');
+              
                   if (!hasLocation) {
                     tx.executeSql(
                       "ALTER TABLE availability ADD COLUMN location TEXT DEFAULT 'Not specified'"
                     );
                   }
+                  if (!hasUserId) {
+                    tx.executeSql(
+                      "ALTER TABLE availability ADD COLUMN user_id INTEGER"
+                    );
+                  }
                 }
               );
-            }
+                          }
           }
         );
             tx.executeSql(
@@ -520,20 +526,34 @@ export const joinStudyGroup = (groupId, userId) => {
   });
 };
 
-
-export const setAvailability = (groupId, day, startTime, endTime, location) => {
+export const deleteAvailability = (availabilityId) => {
   const db = openDatabase();
   return new Promise((resolve, reject) => {
     db.transaction((tx) => {
       tx.executeSql(
-        'INSERT INTO availability (group_id, day, start_time, end_time, location) VALUES (?, ?, ?, ?, ?)',
-        [groupId, day, startTime, endTime, location],
+        'DELETE FROM availability WHERE id = ?',
+        [availabilityId],
+        (_, result) => resolve(result),
+        (_, error) => reject(error)
+      );
+    });
+  });
+};
+
+export const setAvailability = (groupId, day, startTime, endTime, location, userId) => {
+  const db = openDatabase();
+  return new Promise((resolve, reject) => {
+    db.transaction((tx) => {
+      tx.executeSql(
+        'INSERT INTO availability (group_id, day, start_time, end_time, location, user_id) VALUES (?, ?, ?, ?, ?, ?)',
+        [groupId, day, startTime, endTime, location, userId],
         (_, { insertId }) => resolve(insertId),
         (_, error) => reject(error)
       );
     });
   });
 };
+
 export const getAvailability = (groupId) => {
   const db = openDatabase();
   return new Promise((resolve, reject) => {

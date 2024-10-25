@@ -237,11 +237,13 @@ const GroupDetailsScreen = ({ route, navigation }) => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Availability</Text>
           <AvailabilityPicker 
-            groupId={groupId} 
-            availability={availability} 
-            onAvailabilityUpdate={handleAvailabilityUpdate}
-            isMember={isMember}
-          />
+  groupId={groupId} 
+  availability={availability} 
+  onAvailabilityUpdate={handleAvailabilityUpdate}
+  isMember={isMember}
+  currentUserId={user.id}
+  isGroupCreator={isCreator}
+/>
         </View>
 
         {!isMember && (

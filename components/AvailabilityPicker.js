@@ -9,11 +9,11 @@ import {
   TextInput 
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { setAvailability, checkAvailabilityExists, getAvailability } from '../services/DatabaseService';
+import { setAvailability, checkAvailabilityExists, getAvailability,deleteAvailability } from '../services/DatabaseService';
 
 const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
-const AvailabilityPicker = ({ groupId, availability, onAvailabilityUpdate, isMember = false }) => {
+const AvailabilityPicker = ({ groupId, availability, onAvailabilityUpdate, isMember = false, currentUserId, isGroupCreator }) => {
   const [selectedDay, setSelectedDay] = useState(null);
   const [showStartPicker, setShowStartPicker] = useState(false);
   const [showEndPicker, setShowEndPicker] = useState(false);
@@ -106,17 +106,64 @@ const AvailabilityPicker = ({ groupId, availability, onAvailabilityUpdate, isMem
         return;
       }
 
-      await setAvailability(groupId, selectedDay, formattedStartTime, formattedEndTime, location);
+      await setAvailability(groupId, selectedDay, formattedStartTime, formattedEndTime, location, currentUserId);
       const newAvailability = await getAvailability(groupId);
       onAvailabilityUpdate(newAvailability);
-      setLocation(''); // Reset location after successful submission
+      setLocation('');
       Alert.alert('Success', 'Availability set successfully');
     } catch (error) {
       console.error('Error setting availability:', error);
       Alert.alert('Error', 'Failed to set availability');
     }
   };
+  const handleDeleteAvailability = async (availabilityId, slotUserId) => {
+    // Check if user is allowed to delete
+    if (currentUserId !== slotUserId && !isGroupCreator) {
+      Alert.alert('Access Denied', 'You can only delete your own availability slots');
+      return;
+    }
 
+    Alert.alert(
+      'Delete Availability',
+      'Are you sure you want to delete this availability slot?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel'
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteAvailability(availabilityId);
+              const newAvailability = await getAvailability(groupId);
+              onAvailabilityUpdate(newAvailability);
+            } catch (error) {
+              console.error('Error deleting availability:', error);
+              Alert.alert('Error', 'Failed to delete availability');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const renderAvailabilitySlot = (slot, index) => (
+    <View key={index} style={styles.availabilitySlot}>
+      <Text style={styles.availabilityText}>
+        {slot.day}: {slot.start_time} - {slot.end_time} @ {slot.location}
+      </Text>
+      {(currentUserId === slot.user_id || isGroupCreator) && (
+        <TouchableOpacity 
+          style={styles.deleteButton}
+          onPress={() => handleDeleteAvailability(slot.id, slot.user_id)}
+        >
+          <Text style={styles.deleteButtonText}>×</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
 
   const handleDaySelect = (day) => {
     if (!isMember) {
@@ -211,6 +258,8 @@ const AvailabilityPicker = ({ groupId, availability, onAvailabilityUpdate, isMem
           {slot.day}: {slot.start_time} - {slot.end_time} @ {slot.location}
         </Text>
       ))}
+      <Text style={styles.sectionTitle}>Current Availability:</Text>
+      {availability.map((slot, index) => renderAvailabilitySlot(slot, index))}
     </View>
   );
 };
@@ -271,6 +320,31 @@ const styles = StyleSheet.create({
     padding: 8,
     marginTop: 4,
     backgroundColor: '#fff',
+  },
+  availabilitySlot: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 4,
+  },
+  availabilityText: {
+    fontSize: 14,
+    flex: 1,
+  },
+  deleteButton: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#ff4444',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  deleteButtonText: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: 'bold',
+    lineHeight: 22,
   },
 
 });

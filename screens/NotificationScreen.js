@@ -36,7 +36,6 @@ const NotificationScreen = () => {
 
   const handleJoinResponse = async (notification, isAccepted) => {
     try {
-      // Need to get the join_request_id from the notification
       if (!notification.request_id) {
         throw new Error('Join request ID not found in notification');
       }
@@ -61,7 +60,6 @@ const NotificationScreen = () => {
   const renderNotification = ({ item }) => {
     const isJoinRequest = item.type === 'join_request';
     
-    // Create a more structured notification message
     const getMessage = () => {
       if (isJoinRequest) {
         return (
@@ -72,7 +70,6 @@ const NotificationScreen = () => {
           </Text>
         );
       }
-      // Handle other notification types here
       return <Text style={styles.notificationText}>{item.content}</Text>;
     };
     

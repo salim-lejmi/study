@@ -108,38 +108,38 @@ const styles = StyleSheet.create({
   },
   logoContainer: {
     alignItems: 'center',
-    marginTop: 20, // Reduced from 40
-    marginBottom: 20, // Reduced from 40
+    marginTop: 20, 
+    marginBottom: 20,
   },
   logo: {
-    width: 150, // Reduced from 200
-    height: 75,  // Reduced from 100
+    width: 150, 
+    height: 75,  
   },
   formContainer: {
     flex: 1,
-    justifyContent: 'flex-start', // Changed from center to start from top after logo
+    justifyContent: 'flex-start',
     paddingTop: 20,
   },
   input: {
     height: 45,
     borderColor: 'gray',
     borderWidth: 1,
-    marginBottom: 10, // Reduced from 12
+    marginBottom: 10, 
     paddingHorizontal: 12,
     borderRadius: 5,
-    fontSize: 14, // Added specific font size
+    fontSize: 14, 
   },
   disabled: {
     backgroundColor: '#f0f0f0',
     opacity: 0.7,
   },
   linkContainer: {
-    marginTop: 15, // Reduced from 20
+    marginTop: 15, 
     alignItems: 'center',
   },
   linkText: {
     color: '#007AFF',
-    fontSize: 14, // Reduced from 16
+    fontSize: 14, 
   },
 });
 

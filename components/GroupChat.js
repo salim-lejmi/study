@@ -13,10 +13,10 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
-import { Ionicons } from '@expo/vector-icons'; // Using Expo's built-in icons
+import { Ionicons } from '@expo/vector-icons'; 
 import { sendMessage, getMessages } from '../services/DatabaseService';
 
-// URL matching regex pattern
+
 const URL_REGEX = /(https?:\/\/[^\s]+)|(www\.[^\s]+)/g;
 
 const GroupChat = ({ groupId, currentUser, visible, onClose }) => {
@@ -34,7 +34,6 @@ const GroupChat = ({ groupId, currentUser, visible, onClose }) => {
 
   useEffect(() => {
     (async () => {
-      // Request permission to access the photo library
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
         alert('Sorry, we need camera roll permissions to share images!');
@@ -65,7 +64,6 @@ const GroupChat = ({ groupId, currentUser, visible, onClose }) => {
 
   const handleImagePick = async () => {
     try {
-      // Request permission first
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
         alert('Sorry, we need camera roll permissions to share images!');
@@ -82,23 +80,19 @@ const GroupChat = ({ groupId, currentUser, visible, onClose }) => {
       if (!result.canceled && result.assets && result.assets[0]) {
         const selectedImage = result.assets[0];
         
-        // Create a unique filename for the image
         const filename = `${Date.now()}_${currentUser.id}.jpg`;
         const destinationUri = `${FileSystem.documentDirectory}images/${filename}`;
   
-        // Ensure the images directory exists
         await FileSystem.makeDirectoryAsync(
           `${FileSystem.documentDirectory}images/`,
           { intermediates: true }
         );
   
-        // Copy the image to app's document directory
         await FileSystem.copyAsync({
           from: selectedImage.uri,
           to: destinationUri,
         });
   
-        // Send message with image
         await sendMessage(
           groupId,
           currentUser.id,

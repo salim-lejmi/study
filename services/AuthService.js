@@ -40,7 +40,7 @@ export const AuthProvider = ({ children }) => {
             (_, { rows }) => {
               if (rows.length > 0) {
                 const user = rows.item(0);
-                // Include is_admin in user object
+          
                 setUser({
                   id: user.id,
                   name: user.name,
@@ -72,7 +72,7 @@ export const AuthProvider = ({ children }) => {
     }
 
     try {
-      await resetDatabaseConnection(); // Ensure clean database state
+      await resetDatabaseConnection(); 
       const emailExists = await checkEmailExists(email);
       
       if (emailExists) {
@@ -112,10 +112,10 @@ export const AuthProvider = ({ children }) => {
     try {
       await AsyncStorage.removeItem('user');
       setUser(null);
-      await resetDatabaseConnection(); // Clean up database connection on logout
+      await resetDatabaseConnection();
     } catch (error) {
       console.error('Error during logout:', error);
-      // Still set user to null even if there's an error
+ 
       setUser(null);
     }
   };

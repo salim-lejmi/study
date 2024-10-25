@@ -18,7 +18,6 @@ import GroupChat from '../components/GroupChat';
 
 const { width } = Dimensions.get('window');
 
-// Keep existing MessageIcon and CustomButton components...
 const MessageIcon = () => (
   <View style={styles.messageIconContainer}>
     <View style={styles.messageIconInner}>
@@ -182,7 +181,6 @@ const GroupDetailsScreen = ({ route, navigation }) => {
           onPress: async () => {
             try {
               await removeGroupMember(groupId, memberId);
-              // Refresh member list
               fetchGroupDetails();
             } catch (error) {
               Alert.alert('Error', 'Failed to remove member from group');
@@ -197,7 +195,7 @@ const GroupDetailsScreen = ({ route, navigation }) => {
     <MemberCard 
       name={item.name}
       userId={item.id}
-      isCreator={isCreator && item.id !== user.id}  // Only show kick button if creator AND not self
+      isCreator={isCreator && item.id !== user.id} 
       onPress={() => navigation.navigate('Profile', { userId: item.id })}
       onKick={() => handleKickMember(item.id)}
     />

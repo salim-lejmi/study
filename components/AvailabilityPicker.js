@@ -117,7 +117,6 @@ const AvailabilityPicker = ({ groupId, availability, onAvailabilityUpdate, isMem
     }
   };
   const handleDeleteAvailability = async (availabilityId, slotUserId) => {
-    // Check if user is allowed to delete
     if (currentUserId !== slotUserId && !isGroupCreator) {
       Alert.alert('Access Denied', 'You can only delete your own availability slots');
       return;

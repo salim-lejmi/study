@@ -1,7 +1,7 @@
 import * as SQLite from 'expo-sqlite/legacy';
 
 const DB_NAME = 'studygroups.db';
-const DEBUG = true;  // Enable detailed logging
+const DEBUG = true;  
 
 let database = null;
 export const openDatabase = () => {
@@ -54,7 +54,6 @@ export const initDatabase = () => {
           logDebug('Added request_id column to notifications table');
         },
         (_, error) => {
-          // Column might already exist, which is fine
           logDebug('Column request_id might already exist:', error);
         });
         tx.executeSql(`
@@ -73,7 +72,6 @@ export const initDatabase = () => {
           )
         `);
 
-        // Join requests table
         tx.executeSql(`
           CREATE TABLE IF NOT EXISTS join_requests (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -85,10 +83,8 @@ export const initDatabase = () => {
             FOREIGN KEY (user_id) REFERENCES users (id)
           )
         `);
-        // Enable foreign keys
         tx.executeSql('PRAGMA foreign_keys = ON;');
 
-        // Check if the 'messages' table exists and adjust its columns
         tx.executeSql(
           "SELECT sql FROM sqlite_master WHERE type='table' AND name='messages'",
           [],
@@ -96,7 +92,6 @@ export const initDatabase = () => {
             const tableExists = rows.length > 0;
 
             if (!tableExists) {
-              // Create 'messages' table if it doesn't exist
               tx.executeSql(`
                 CREATE TABLE IF NOT EXISTS messages (
                   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -111,7 +106,6 @@ export const initDatabase = () => {
                 )
               `);
             } else {
-              // Check if 'message_type' and 'image_url' columns exist
               tx.executeSql("PRAGMA table_info(messages)", [], (_, { rows: columnInfo }) => {
                 const hasMessageType = columnInfo._array.some(col => col.name === 'message_type');
                 const hasImageUrl = columnInfo._array.some(col => col.name === 'image_url');
@@ -128,7 +122,6 @@ export const initDatabase = () => {
           }
         );
 
-        // Check if 'description' and 'subjects_of_interest' columns exist in 'users' table
         tx.executeSql("PRAGMA table_info(users)", [], (_, { rows: columnInfo }) => {
           const hasDescription = columnInfo._array.some(col => col.name === 'description');
           const hasSubjectsOfInterest = columnInfo._array.some(col => col.name === 'subjects_of_interest');
@@ -142,7 +135,6 @@ export const initDatabase = () => {
           }
         });
 
-        // Create 'users' table if it doesn't exist
         tx.executeSql(`
           CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -153,7 +145,6 @@ export const initDatabase = () => {
           )
         `);
 
-        // Create 'study_groups' table
         tx.executeSql(`
           CREATE TABLE IF NOT EXISTS study_groups (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -164,7 +155,6 @@ export const initDatabase = () => {
           )
         `);
 
-        // Create 'group_members' table
         tx.executeSql(`
           CREATE TABLE IF NOT EXISTS group_members (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -175,7 +165,6 @@ export const initDatabase = () => {
           )
         `);
 
-        // Create 'availability' table
         tx.executeSql(
           "SELECT sql FROM sqlite_master WHERE type='table' AND name='availability'",
           [],
@@ -183,7 +172,6 @@ export const initDatabase = () => {
             const tableExists = rows.length > 0;
     
             if (!tableExists) {
-              // Create availability table if it doesn't exist
               tx.executeSql(`
                 CREATE TABLE IF NOT EXISTS availability (
                   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -196,7 +184,6 @@ export const initDatabase = () => {
                 )
               `);
             } else {
-              // Check if location column exists
               tx.executeSql(
                 "PRAGMA table_info(availability)", 
                 [], 
@@ -230,7 +217,6 @@ export const initDatabase = () => {
           }
         );
 
-        // Create admin user if doesn't exist
         tx.executeSql(
           'SELECT * FROM users WHERE email = ?',
           ['admin@gmail.com'],
@@ -272,21 +258,16 @@ export const getAllUsers = () => {
   });
 };
 
-// Delete user and all their related data
 export const deleteUser = (userId) => {
   const db = openDatabase();
   return new Promise((resolve, reject) => {
     db.transaction((tx) => {
-      // Delete user's messages
       tx.executeSql('DELETE FROM messages WHERE user_id = ?', [userId]);
       
-      // Delete user's group memberships
       tx.executeSql('DELETE FROM group_members WHERE user_id = ?', [userId]);
       
-      // Delete groups created by user
       tx.executeSql('DELETE FROM study_groups WHERE creator_id = ?', [userId]);
       
-      // Finally delete the user
       tx.executeSql(
         'DELETE FROM users WHERE id = ?',
         [userId],
@@ -297,14 +278,12 @@ export const deleteUser = (userId) => {
   });
 };
 
-// Get dashboard statistics
 export const getDashboardStats = () => {
   const db = openDatabase();
   return new Promise((resolve, reject) => {
     db.transaction((tx) => {
       const stats = {};
       
-      // Get total users count
       tx.executeSql(
         'SELECT COUNT(*) as count FROM users WHERE is_admin = 0',
         [],
@@ -313,7 +292,6 @@ export const getDashboardStats = () => {
         }
       );
       
-      // Get total groups count
       tx.executeSql(
         'SELECT COUNT(*) as count FROM study_groups',
         [],
@@ -322,7 +300,6 @@ export const getDashboardStats = () => {
         }
       );
       
-      // Get total messages count
       tx.executeSql(
         'SELECT COUNT(*) as count FROM messages',
         [],
@@ -331,7 +308,6 @@ export const getDashboardStats = () => {
         }
       );
       
-      // Get subjects distribution
       tx.executeSql(
         'SELECT subject, COUNT(*) as count FROM study_groups GROUP BY subject',
         [],
@@ -340,7 +316,6 @@ export const getDashboardStats = () => {
         }
       );
       
-      // Get most active groups
       tx.executeSql(
         `SELECT study_groups.name, COUNT(messages.id) as message_count 
          FROM study_groups 
@@ -391,7 +366,6 @@ export const removeGroupMember = (groupId, userId) => {
 };
 
 
-// Helper function to check if email exists
 export const checkEmailExists = async (email) => {
   const db = openDatabase();
   return new Promise((resolve, reject) => {
@@ -470,7 +444,6 @@ export const createStudyGroup = (name, subject, creatorId) => {
         'INSERT INTO study_groups (name, subject, creator_id) VALUES (?, ?, ?)',
         [name, subject, creatorId],
         (_, { insertId }) => {
-          // Automatically add creator to group_members
           tx.executeSql(
             'INSERT INTO group_members (group_id, user_id) VALUES (?, ?)',
             [insertId, creatorId],
@@ -756,21 +729,18 @@ export const handleJoinRequest = (requestId, isAccepted, notificationContent) =>
           const request = rows.item(0);
           const status = isAccepted ? 'accepted' : 'rejected';
           
-          // Update request status
           tx.executeSql(
             'UPDATE join_requests SET status = ? WHERE id = ?',
             [status, requestId]
           );
           
           if (isAccepted) {
-            // Add user to group if accepted
             tx.executeSql(
               'INSERT INTO group_members (group_id, user_id) VALUES (?, ?)',
               [request.group_id, request.user_id]
             );
           }
           
-          // Create notification for the requesting user
           tx.executeSql(
             `INSERT INTO notifications (
               recipient_id, type, content, group_id, status
@@ -791,7 +761,6 @@ export const handleJoinRequest = (requestId, isAccepted, notificationContent) =>
     });
   });
 };
-// Helper to check if request already exists
 const checkExistingRequest = (tx, groupId, userId) => {
   return new Promise((resolve, reject) => {
     tx.executeSql(
@@ -831,7 +800,6 @@ export const createJoinRequest = async (groupId, userId) => {
     logDebug('Beginning database transaction');
     
     db.transaction(tx => {
-      // Step 1: Verify the group exists and get creator info
       const checkGroupQuery = 'SELECT creator_id, name FROM study_groups WHERE id = ?';
       logDebug('Executing query', checkGroupQuery);
       
@@ -852,7 +820,6 @@ export const createJoinRequest = async (groupId, userId) => {
           const groupName = rows.item(0).name;
           logDebug('Found group info', { creatorId, groupName });
 
-          // Step 2: Check if user is already a member
           const checkMembershipQuery = 'SELECT * FROM group_members WHERE group_id = ? AND user_id = ?';
           logDebug('Checking existing membership');
           
@@ -869,7 +836,6 @@ export const createJoinRequest = async (groupId, userId) => {
                 return;
               }
 
-              // Step 3: Check for existing pending request
               const checkRequestQuery = 'SELECT * FROM join_requests WHERE group_id = ? AND user_id = ? AND status = "pending"';
               logDebug('Checking existing requests');
               
@@ -886,7 +852,6 @@ export const createJoinRequest = async (groupId, userId) => {
                     return;
                   }
 
-                  // Step 4: Get user info for notification
                   const getUserQuery = 'SELECT name FROM users WHERE id = ?';
                   logDebug('Getting user info');
                   
@@ -905,7 +870,6 @@ export const createJoinRequest = async (groupId, userId) => {
 
                       const userName = userRows.item(0).name;
                       
-                      // Step 5: Create the join request
                       const createRequestQuery = `
                       INSERT INTO join_requests (group_id, user_id, status, created_at) 
                       VALUES (?, ?, "pending", datetime('now'))
@@ -917,7 +881,7 @@ export const createJoinRequest = async (groupId, userId) => {
                       (_, { insertId: requestId }) => {
                         logDebug('Join request created', { requestId });
               
-const notificationContent = `wants to join`; // Simplified content
+const notificationContent = `wants to join`; 
   const createNotificationQuery = `
     INSERT INTO notifications (
       recipient_id, 

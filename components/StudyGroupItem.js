@@ -6,7 +6,7 @@ const StudyGroupItem = ({ group, onPress, onDelete, currentUserId }) => {
     <TouchableOpacity style={styles.container} onPress={onPress}>
       <View style={styles.header}>
         <Text style={styles.name}>{group.name}</Text>
-        {currentUserId && group.creator_id === currentUserId && ( // Add null check
+        {currentUserId && group.creator_id === currentUserId && ( 
           <TouchableOpacity 
             style={styles.deleteButton} 
             onPress={() => onDelete(group.id)}

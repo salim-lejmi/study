@@ -871,16 +871,23 @@ export const createJoinRequest = async (groupId, userId) => {
                       (_, { insertId: requestId }) => {
                         logDebug('Join request created', { requestId });
               
-                        const notificationContent = `${userName} wants to join ${groupName}`;
-                        const createNotificationQuery = `
-                          INSERT INTO notifications (
-                            recipient_id, sender_id, type, content, group_id, status, created_at, request_id
-                          ) VALUES (?, ?, ?, ?, ?, ?, datetime('now'), ?)
-                        `;
-                        
-                        tx.executeSql(
-                          createNotificationQuery,
-                          [creatorId, userId, 'join_request', notificationContent, groupId, 'unread', requestId],
+const notificationContent = `wants to join`; // Simplified content
+  const createNotificationQuery = `
+    INSERT INTO notifications (
+      recipient_id, 
+      sender_id, 
+      type, 
+      content, 
+      group_id, 
+      status, 
+      created_at, 
+      request_id
+    ) VALUES (?, ?, ?, ?, ?, ?, datetime('now'), ?)
+  `;
+
+  tx.executeSql(
+    createNotificationQuery,
+    [creatorId, userId, 'join_request', notificationContent, groupId, 'unread', requestId],
                           (_, { insertId: notificationId }) => {
                             logDebug('Notification created', { notificationId, requestId });
                             resolve({ requestId, notificationId });

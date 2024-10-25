@@ -61,11 +61,24 @@ const NotificationScreen = () => {
   const renderNotification = ({ item }) => {
     const isJoinRequest = item.type === 'join_request';
     
+    // Create a more structured notification message
+    const getMessage = () => {
+      if (isJoinRequest) {
+        return (
+          <Text style={styles.notificationText}>
+            <Text style={styles.boldText}>{item.sender_name}</Text>
+            {' '}{item.content}{' '}
+            <Text style={styles.boldText}>{item.group_name}</Text>
+          </Text>
+        );
+      }
+      // Handle other notification types here
+      return <Text style={styles.notificationText}>{item.content}</Text>;
+    };
+    
     return (
       <View style={styles.notificationCard}>
-        <Text style={styles.notificationText}>
-          {item.sender_name} {item.content} {item.group_name}
-        </Text>
+        {getMessage()}
         <Text style={styles.timeText}>
           {new Date(item.created_at).toLocaleDateString()}
         </Text>
@@ -162,6 +175,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
   },
+  boldText: {
+    fontWeight: 'bold'
+  },
+  notificationText: {
+    fontSize: 16,
+    marginBottom: 8
+  }
 });
+
+ 
 
 export default NotificationScreen;
